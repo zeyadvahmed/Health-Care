@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "357343015182",
+    "project_id": "sparksteel-87c43",
+    "storage_bucket": "sparksteel-87c43.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:357343015182:android:7f4973d7c75099785d275f",
+        "android_client_info": {
+          "package_name": "com.example.sparksteel"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDahI5SiFyPw-BzzHyzcgHO7D4PMBEVR9s"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
