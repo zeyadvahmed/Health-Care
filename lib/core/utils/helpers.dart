@@ -82,4 +82,13 @@ class Helpers {
       ),
     );
   }
+
+  static Color difficultyColor(String difficulty) {
+  switch (difficulty.toLowerCase()) {
+    case 'beginner':     return const Color(0xFF4CAF50); // green
+    case 'intermediate': return const Color(0xFFFF9800); // orange
+    case 'expert':       return const Color(0xFFE53935); // red
+    default:             return const Color(0xFF137FEC); // steel blue
+  }
+}
 }

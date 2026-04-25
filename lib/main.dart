@@ -28,14 +28,12 @@ void main() async {
   ]);
 
   // ── Step 3: Initialize Firebase ───────────────────────────
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
   // ── Step 4: Initialize SQLite database ────────────────────
   // This creates all tables on first launch.
   // Must be done before any screen tries to read/write data.
-  //await DatabaseHelper.instance.database;
+  await DatabaseHelper.instance.database;
 
   // ── Step 5: Run the app ───────────────────────────────────
   runApp(const SparkSteelApp());

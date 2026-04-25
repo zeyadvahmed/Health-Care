@@ -32,6 +32,7 @@ class WorkoutModel {
   final DateTime createdAt;
   final DateTime updatedAt;
   final bool isSynced;
+  final String? imageUrl; // optional image URL for workout card
 
   WorkoutModel({
     required this.id,
@@ -44,6 +45,7 @@ class WorkoutModel {
     required this.createdAt,
     required this.updatedAt,
     this.isSynced = false,
+    this.imageUrl,
   });
 
   // ----------------------------------------------------------
@@ -62,6 +64,7 @@ class WorkoutModel {
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
       'isSynced': isSynced ? 1 : 0,
+      'imageUrl': imageUrl,
     };
   }
 
@@ -81,6 +84,7 @@ class WorkoutModel {
       createdAt: DateTime.parse(map['createdAt']),
       updatedAt: DateTime.parse(map['updatedAt']),
       isSynced: map['isSynced'] == 1,
+      imageUrl: map['imageUrl'],
     );
   }
 
@@ -100,6 +104,7 @@ class WorkoutModel {
       'createdAt': Timestamp.fromDate(createdAt),
       'updatedAt': Timestamp.fromDate(updatedAt),
       'isSynced': true,
+      'imageUrl': imageUrl,
     };
   }
 
@@ -119,6 +124,7 @@ class WorkoutModel {
       createdAt: (map['createdAt'] as Timestamp).toDate(),
       updatedAt: (map['updatedAt'] as Timestamp).toDate(),
       isSynced: true,
+      imageUrl: map['imageUrl'],
     );
   }
 
@@ -138,6 +144,7 @@ class WorkoutModel {
     DateTime? createdAt,
     DateTime? updatedAt,
     bool? isSynced,
+    String? imageUrl,
   }) {
     return WorkoutModel(
       id: id ?? this.id,
@@ -150,6 +157,7 @@ class WorkoutModel {
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       isSynced: isSynced ?? this.isSynced,
+      imageUrl: imageUrl ?? this.imageUrl,
     );
   }
 }
