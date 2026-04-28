@@ -1,66 +1,120 @@
 // ============================================================
 // custom_button.dart
-// Reusable primary action button used across the entire app.
+// lib/shared/widgets/buttons/custom_button.dart
 //
-// Usage:
-//   CustomButton(
-//     label: 'Save Workout',
-//     onPressed: () => controller.save(),
-//   )
-//   CustomButton(
-//     label: 'Cancel',
-//     isOutlined: true,
-//     onPressed: () => Navigator.pop(context),
-//   )
-//   CustomButton(
-//     label: 'Loading...',
-//     isLoading: true,
-//     onPressed: null,
-//   )
+// PURPOSE:
+//   The single reusable action button used across the whole app.
+//   Used for: Login, Save Workout, Start Workout, Save Note,
+//             Save Medication, Collect XP, Save and Exit.
 //
-// Parameters:
-//   label      — text displayed inside the button (required)
-//   onPressed  — callback when tapped, pass null to disable (required)
-//   isLoading  — shows CircularProgressIndicator instead of label
-//   isOutlined — renders as outlined border style instead of filled
-//   color      — override button color, defaults to AppColors.steelColor
-//   width      — override button width, defaults to full width
+// STATES:
+//   Normal   → filled blue button with white label text
+//   Loading  → spinner replaces label, button is still tappable
+//   Outlined → transparent with blue border and blue label
+//   Disabled → pass onPressed: null → automatic grey style
 //
-// Rules:
-//   - Always use AppColors for colors, never raw hex
-//   - Use AppTheme button style as the base, only override when needed
-//   - StatelessWidget — no internal state needed
+// RULES:
+//   - StatelessWidget — all state passed in as parameters
+//   - Use AppColors for all colors — never hardcode Color()
+//   - Use AppTheme button style as base
 // ============================================================
 
 import 'package:flutter/material.dart';
 import 'package:sparksteel/core/constants/app_colors.dart';
 
+
 class CustomButton extends StatelessWidget {
-  String label;
-  VoidCallback? onPressed;
-  CustomButton({super.key, required this.label, this.onPressed});
+  // The text displayed inside the button
+  final String label;
+
+  // What happens when tapped. Pass null to disable the button.
+  final VoidCallback? onPressed;
+
+  // When true: shows CircularProgressIndicator instead of label
+  final bool isLoading;
+
+  // When true: outlined border style instead of filled
+  final bool isOutlined;
+
+  // Override the default button color (defaults to steelColor)
+  final Color? color;
+
+  // Override the button width (defaults to full width)
+  final double? width;
+
+  // Override the button height (defaults to full width)
+  final double? height;
+
+
+
+  const CustomButton({
+    super.key,
+    required this.label,
+    required this.onPressed,
+    this.isLoading = false,
+    this.isOutlined = false,
+    this.color,
+    this.width,
+    this.height,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onPressed,
-      child: Container(
-        height: 54,
-        decoration: BoxDecoration(
-          color: Color(0xff137FEC), // Replace with AppColors.steelColor
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Center(
-          child: Text(
+    // Determine button color: use passed color or default steelColor
+    final buttonColor = color ?? AppColors.steelColor;
+
+    // The content inside the button — spinner or label
+    final Widget buttonChild = isLoading
+        ? SizedBox(
+            height: 20,
+            width: 20,
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              // Spinner color: white on filled, blue on outlined
+              color: isOutlined ? buttonColor : Colors.white,
+            ),
+          )
+        : Text(
             label,
             style: TextStyle(
-              color: Colors.white,
-              fontSize: 16,
+              fontSize: 15,
               fontWeight: FontWeight.w600,
+              // Text color: white on filled, blue on outlined
+              color: isOutlined ? buttonColor : Colors.white,
             ),
-          ),
-        ),
-      ),
+          );
+
+    // Container handles the optional width constraint
+    return SizedBox(
+      width: width ?? double.infinity, // full width by default
+      height: height ?? 50,
+      child: isOutlined
+          // ── Outlined style ─────────────────────────────
+          ? OutlinedButton(
+              onPressed: onPressed,
+              style: OutlinedButton.styleFrom(
+                side: BorderSide(color: buttonColor, width: 1.5),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              child: buttonChild,
+            )
+          // ── Filled style ───────────────────────────────
+          : ElevatedButton(
+              onPressed: onPressed,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: buttonColor,
+                // When disabled (onPressed=null) use dimmed color
+                disabledBackgroundColor:
+                    buttonColor.withValues(alpha: 0.4), // 40% opacity.
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                elevation: 0,
+              ),
+              child: buttonChild,
+            ),
     );
   }
 }
