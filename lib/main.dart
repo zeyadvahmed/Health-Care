@@ -15,7 +15,6 @@ import 'package:flutter/services.dart';
 import 'package:sparksteel/firebase_options.dart';
 
 import 'app.dart';
-import 'data/local/database_helper.dart';
 
 void main() async {
   // ── Step 1: Must be called before any async work ──────────

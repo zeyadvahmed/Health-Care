@@ -20,3 +20,16 @@
 //   - Return WorkoutExerciseModel via pop, do not save to DB from here
 //   - Background color: AppColors.background
 // ============================================================
+
+import 'package:flutter/material.dart';
+
+class AddExerciseScreen extends StatelessWidget {
+  const AddExerciseScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return const Scaffold(
+      body: Center(child: Text('Add Exercise Screen')),
+    );
+  }
+}

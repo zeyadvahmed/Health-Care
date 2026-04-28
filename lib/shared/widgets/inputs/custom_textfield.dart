@@ -34,3 +34,56 @@
 //   - Use AppTheme inputDecorationTheme as base style
 //   - Eye icon toggles _isObscured bool in state
 // ============================================================
+import 'package:flutter/material.dart';
+
+class CustomTextfield extends StatelessWidget {
+  String label;
+  String hint;
+  TextEditingController controller;
+  String? Function(String?) validator;    
+  TextInputType keyboardType;
+   CustomTextfield({super.key,
+    required this.label,
+    required this.hint,
+    required this.controller,
+    required this.validator,
+    this.keyboardType = TextInputType.text,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            color: Color(0xff4C4C4C),
+          ),
+        ),
+        TextFormField(
+          controller: controller,
+          validator: validator,
+          keyboardType: keyboardType,
+          decoration: InputDecoration(
+            suffixText: 'kcal',
+            suffixStyle: TextStyle(color: Colors.black),
+            filled: true,
+            fillColor: Colors.white,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(15),
+              borderSide: BorderSide(color: Color(0xffB1B1B1)),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(15),
+              borderSide: BorderSide(color: Color(0xffB1B1B1)),
+            ),
+            hintText: hint,
+          ),
+        ),
+      ],
+    );
+  }
+}

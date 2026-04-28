@@ -15,7 +15,6 @@ import 'package:flutter/material.dart';
 import 'core/theme/app_theme.dart';
 import 'core/constants/app_strings.dart';
 import 'routes/app_routes.dart';
-import 'features/auth/splash_screen.dart';
 
 class SparkSteelApp extends StatelessWidget {
   const SparkSteelApp({super.key});
@@ -48,7 +47,7 @@ class SparkSteelApp extends StatelessWidget {
       //   logged in  → HomeScreen
       //   logged out → LoginScreen
       //   checking   → splash UI
-      home: const SplashScreen(),
+      initialRoute: AppRoutes.mentalHealth,
 
       // ── All named routes ───────────────────────────────────
       // Every screen registered here.

@@ -19,3 +19,16 @@
 //   - StatefulWidget — checkbox state changes the progress counter
 //   - Background color: AppColors.background
 // ============================================================
+
+import 'package:flutter/material.dart';
+
+class MedicalTrackerScreen extends StatelessWidget {
+  const MedicalTrackerScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return const Scaffold(
+      body: Center(child: Text('Medical Tracker Screen')),
+    );
+  }
+}

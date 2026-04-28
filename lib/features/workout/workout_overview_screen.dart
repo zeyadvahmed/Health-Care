@@ -21,3 +21,16 @@
 //   - Navigated to via Navigator.push (not pushNamed) with WorkoutModel
 //   - Background color: AppColors.background
 // ============================================================
+
+import 'package:flutter/material.dart';
+
+class WorkoutOverviewScreen extends StatelessWidget {
+  const WorkoutOverviewScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return const Scaffold(
+      body: Center(child: Text('Workout Overview Screen')),
+    );
+  }
+}

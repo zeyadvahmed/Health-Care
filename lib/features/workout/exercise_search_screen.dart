@@ -18,3 +18,16 @@
 //   - No data passed back — read only screen
 //   - Background color: AppColors.background
 // ============================================================
+
+import 'package:flutter/material.dart';
+
+class ExerciseSearchScreen extends StatelessWidget {
+  const ExerciseSearchScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return const Scaffold(
+      body: Center(child: Text('Exercise Search Screen')),
+    );
+  }
+}

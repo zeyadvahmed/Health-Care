@@ -20,3 +20,16 @@
 //   - Validate form before saving
 //   - Background color: AppColors.background
 // ============================================================
+
+import 'package:flutter/material.dart';
+
+class CreateWorkoutScreen extends StatelessWidget {
+  const CreateWorkoutScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return const Scaffold(
+      body: Center(child: Text('Create Workout Screen')),
+    );
+  }
+}

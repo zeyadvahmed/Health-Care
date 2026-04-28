@@ -23,3 +23,16 @@
 //   - Use fl_chart or charts_flutter for all charts if available in pubspec
 //   - Background color: AppColors.background
 // ============================================================
+
+import 'package:flutter/material.dart';
+
+class ProgressScreen extends StatelessWidget {
+  const ProgressScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return const Scaffold(
+      body: Center(child: Text('Progress Screen')),
+    );
+  }
+}

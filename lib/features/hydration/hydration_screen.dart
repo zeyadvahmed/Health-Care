@@ -20,3 +20,16 @@
 //   - StatefulWidget — ring and list update on every water addition
 //   - Background color: AppColors.background
 // ============================================================
+
+import 'package:flutter/material.dart';
+
+class HydrationScreen extends StatelessWidget {
+  const HydrationScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return const Scaffold(
+      body: Center(child: Text('Hydration Screen')),
+    );
+  }
+}

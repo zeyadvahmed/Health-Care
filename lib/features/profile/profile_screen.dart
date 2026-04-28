@@ -22,3 +22,16 @@
 //   - StatefulWidget — dark mode toggle and edit dialogs change displayed values
 //   - Background color: AppColors.background
 // ============================================================
+
+import 'package:flutter/material.dart';
+
+class ProfileScreen extends StatelessWidget {
+  const ProfileScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return const Scaffold(
+      body: Center(child: Text('Profile Screen')),
+    );
+  }
+}
