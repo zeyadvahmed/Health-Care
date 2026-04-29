@@ -31,10 +31,10 @@
 //   - No Flutter imports — pure Dart + cloud_firestore
 // ============================================================
 
+// ignore: uri_does_not_exist
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class FirestoreService {
-
   // ----------------------------------------------------------
   // SINGLETON
   // ----------------------------------------------------------
@@ -97,10 +97,7 @@ class FirestoreService {
   // Permanently deletes a document from Firestore.
   // Called by remote services when user deletes data locally.
   // ----------------------------------------------------------
-  Future<void> deleteDocument(
-    String collection,
-    String docId,
-  ) async {
+  Future<void> deleteDocument(String collection, String docId) async {
     await _db.collection(collection).doc(docId).delete();
   }
 

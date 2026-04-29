@@ -49,7 +49,6 @@ import '../remote/remote_activity_service.dart';
 import 'connectivity_service.dart';
 
 class SyncService {
-
   // ----------------------------------------------------------
   // SINGLETON
   // ----------------------------------------------------------
@@ -126,12 +125,10 @@ class SyncService {
   // isSynced=0 after seeding.
   // ----------------------------------------------------------
   Future<void> _syncExercises() async {
-    final unsynced =
-        await LocalExerciseService.instance.getUnsyncedExercises();
+    final unsynced = await LocalExerciseService.instance.getUnsyncedExercises();
     for (final exercise in unsynced) {
       await RemoteExerciseService.instance.pushExercise(exercise);
-      await LocalExerciseService.instance
-          .markExerciseSynced(exercise.id);
+      await LocalExerciseService.instance.markExerciseSynced(exercise.id);
     }
   }
 
@@ -140,12 +137,10 @@ class SyncService {
   // Pushes unsynced workouts to Firestore ROOT collection.
   // ----------------------------------------------------------
   Future<void> _syncWorkouts() async {
-    final unsynced =
-        await LocalWorkoutService.instance.getUnsyncedWorkouts();
+    final unsynced = await LocalWorkoutService.instance.getUnsyncedWorkouts();
     for (final workout in unsynced) {
       await RemoteWorkoutService.instance.pushWorkout(workout);
-      await LocalWorkoutService.instance
-          .markWorkoutSynced(workout.id);
+      await LocalWorkoutService.instance.markWorkoutSynced(workout.id);
     }
   }
 
@@ -158,10 +153,8 @@ class SyncService {
     final unsynced = await LocalWorkoutService.instance
         .getUnsyncedWorkoutExercises();
     for (final we in unsynced) {
-      await RemoteWorkoutService.instance
-          .pushWorkoutExercise(we, uid);
-      await LocalWorkoutService.instance
-          .markWorkoutExerciseSynced(we.id);
+      await RemoteWorkoutService.instance.pushWorkoutExercise(we, uid);
+      await LocalWorkoutService.instance.markWorkoutExerciseSynced(we.id);
     }
   }
 
@@ -172,14 +165,12 @@ class SyncService {
   // never pushed until the user finishes the workout.
   // ----------------------------------------------------------
   Future<void> _syncSessions(String uid) async {
-    final unsynced =
-        await LocalSessionService.instance.getUnsyncedSessions();
+    final unsynced = await LocalSessionService.instance.getUnsyncedSessions();
     for (final session in unsynced) {
       // Skip active sessions — only push completed ones
       if (session.endTime == null) continue;
       await RemoteWorkoutService.instance.pushSession(session, uid);
-      await LocalSessionService.instance
-          .markSessionSynced(session.id);
+      await LocalSessionService.instance.markSessionSynced(session.id);
     }
   }
 
@@ -188,14 +179,12 @@ class SyncService {
   // Pushes unsynced set logs to the user's subcollection.
   // ----------------------------------------------------------
   Future<void> _syncSessionLogs(String uid) async {
-    final unsynced =
-        await LocalSessionService.instance.getUnsyncedLogs();
+    final unsynced = await LocalSessionService.instance.getUnsyncedLogs();
     for (final log in unsynced) {
       await RemoteWorkoutService.instance.pushSessionLog(log, uid);
       await LocalSessionService.instance.markLogSynced(log.id);
     }
   }
-
 
   // ═══════════════════════════════════════════════════════════
   // PULL — Firestore → SQLite (restore on fresh install)
@@ -243,11 +232,10 @@ class SyncService {
     // If already seeded, insertAllExercises uses
     // ConflictAlgorithm.replace so duplicates are safe.
     try {
-      final exercises =
-          await RemoteExerciseService.instance.fetchAllExercises();
+      final exercises = await RemoteExerciseService.instance
+          .fetchAllExercises();
       if (exercises.isNotEmpty) {
-        await LocalExerciseService.instance
-            .insertAllExercises(exercises);
+        await LocalExerciseService.instance.insertAllExercises(exercises);
       }
     } catch (e) {
       print('restoreFromFirestore: exercises failed → $e');
@@ -257,8 +245,9 @@ class SyncService {
     // Pull all workouts the user has created.
     // Filters by userId field inside each Firestore document.
     try {
-      final workouts = await RemoteWorkoutService.instance
-          .fetchWorkoutsForUser(userId);
+      final workouts = await RemoteWorkoutService.instance.fetchWorkoutsForUser(
+        userId,
+      );
       for (final workout in workouts) {
         // Mark as synced — it just came FROM Firestore
         await LocalWorkoutService.instance.insertWorkout(
@@ -289,8 +278,9 @@ class SyncService {
     // Active sessions are never in Firestore so all fetched
     // sessions are guaranteed to have endTime set.
     try {
-      final sessions = await RemoteWorkoutService.instance
-          .fetchSessionsForUser(uid);
+      final sessions = await RemoteWorkoutService.instance.fetchSessionsForUser(
+        uid,
+      );
       for (final session in sessions) {
         await LocalSessionService.instance.insertSession(
           session.copyWith(isSynced: true),
@@ -305,8 +295,7 @@ class SyncService {
     // This can be a large number of documents if the user
     // has a long workout history — called only once.
     try {
-      final logs = await RemoteWorkoutService.instance
-          .fetchLogsForUser(uid);
+      final logs = await RemoteWorkoutService.instance.fetchLogsForUser(uid);
       for (final log in logs) {
         await LocalSessionService.instance.insertSessionLog(
           log.copyWith(isSynced: true),
