@@ -16,3 +16,48 @@
 //   - Spinner color should be AppColors.steelColor
 //   - Message text style should be AppTheme bodyMedium
 // ============================================================
+
+
+import 'package:flutter/material.dart';
+import '../../../core/constants/app_colors.dart';
+  
+class LoadingWidget extends StatelessWidget {
+  final String? message;
+  
+  const LoadingWidget({
+    super.key,
+    this.message,
+  });
+  
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          SizedBox(
+            width: 40,
+            height: 40,
+            child: CircularProgressIndicator(
+              strokeWidth: 3,
+              valueColor: AlwaysStoppedAnimation<Color>(
+                AppColors.steelColor,
+              ),
+            ),
+          ),
+  
+          if (message != null) ...[
+            const SizedBox(height: 16),
+            Text(
+              message!,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: AppColors.textSecondary,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
