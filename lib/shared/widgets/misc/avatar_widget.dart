@@ -51,9 +51,7 @@ class AvatarWidget extends StatelessWidget {
   // "Basmala"     → "B"
   // ----------------------------------------------------------
   String _initials() {
-    final parts = name.trim().split(' ')
-        .where((p) => p.isNotEmpty)
-        .toList();
+    final parts = name.trim().split(' ').where((p) => p.isNotEmpty).toList();
     if (parts.isEmpty) return '?';
     if (parts.length == 1) return parts[0][0].toUpperCase();
     return (parts[0][0] + parts[1][0]).toUpperCase();
@@ -114,10 +112,7 @@ class AvatarWidget extends StatelessWidget {
 
     // Wrap with GestureDetector if onTap provided
     if (onTap != null) {
-      result = GestureDetector(
-        onTap: onTap,
-        child: result,
-      );
+      result = GestureDetector(onTap: onTap, child: result);
     }
 
     return result;
