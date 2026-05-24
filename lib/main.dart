@@ -1,40 +1,53 @@
-// ============================================================
-// main.dart
-// Entry point of the SparkSteel application.
-//
-// Responsibilities:
-//   1. Ensure Flutter engine is ready before doing anything
-//   2. Initialize Firebase (Auth + Firestore)
-//   3. Initialize the local SQLite database
-//   4. Run the app
-// ============================================================
+import 'package:flutter/material.dart';
+
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 import 'package:firebase_core/firebase_core.dart';
-import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:sparksteel/data/local/database_helper.dart';
-import 'package:sparksteel/firebase_options.dart';
 
-import 'app.dart';
+import 'firebase_options.dart';
+
+import 'features/auth/splash_screen.dart';
+
+import 'cubit/workout/workout_cubit.dart';
 
 void main() async {
-  // ── Step 1: Must be called before any async work ──────────
+
   WidgetsFlutterBinding.ensureInitialized();
 
-  // ── Step 2: Lock app to portrait mode ─────────────────────
-  await SystemChrome.setPreferredOrientations([
-    DeviceOrientation.portraitUp,
-    DeviceOrientation.portraitDown,
-  ]);
+  await Firebase.initializeApp(
 
-  // ── Step 3: Initialize Firebase ───────────────────────────
-  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+    options:
+        DefaultFirebaseOptions
+            .currentPlatform,
+  );
 
-  // ── Step 4: Initialize SQLite database ────────────────────
-  // This creates all tables on first launch.
-  // Must be done before any screen tries to read/write data.
-  await DatabaseHelper.instance.database;
+  runApp(
+    const MyApp(),
+  );
+}
 
-  // ── Step 5: Run the app ───────────────────────────────────
-  runApp(const SparkSteelApp());
+class MyApp extends StatelessWidget {
+
+  const MyApp({
+    super.key,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+
+    return BlocProvider(
+
+      create: (_) =>
+          WorkoutCubit(),
+
+      child: MaterialApp(
+
+        debugShowCheckedModeBanner:
+            false,
+
+        home:
+            const SplashScreen(),
+      ),
+    );
+  }
 }
