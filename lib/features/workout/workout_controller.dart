@@ -2,93 +2,67 @@
 // workout_controller.dart
 // lib/features/workout/workout_controller.dart
 //
-// PURPOSE:
-//   The brain for all workout, session, exercise search,
-//   and XP/level logic. The largest controller in the app.
+// Cubit that owns all workout business logic.
 //
-// WHAT IT MANAGES:
-//   - Loading and displaying workouts from SQLite
-//   - Creating, editing, and deleting workouts
-//   - Starting an active workout session
-//   - Logging each set as user checks checkboxes
-//   - Finishing a session: calculating totals + awarding XP
-//   - Searching exercises by name (called on every keystroke)
-//   - Seeding the exercise library on first launch
+// STATE FLOW:
+//   loadWorkouts  → Loading → Loaded | Error
+//   saveWorkout   → Loading → Loaded | Error
+//   deleteWorkout → Loading → Loaded | Error
+//   startSession  → SessionActive
+//   finishSession → Loading → Loaded | Error
+//   searchExercises / loadAllExercises → SearchResults
 //
-// STATE EXPOSED TO SCREENS:
-//   isLoading      → show LoadingWidget while fetching data
-//   errorMessage   → show error snackbar if not null
-//   workouts       → list displayed in workout_list_screen
-//   searchResults  → list displayed in search field dropdown
-//   activeSession  → current in-progress session or null
+// ACTIVITY / XP:
+//   LocalActivityService has no implemented methods yet.
+//   _awardXp() is stubbed — restore when service is implemented.
 //
-// XP FORMULA:
-//   +100 XP per completed session (flat, no multipliers)
-//   currentLevel  = totalXp ~/ 500
-//   xpToNextLevel = ((currentLevel + 1) * 500) - totalXp
-//
-// EXTENDS CHANGENOTIFIER:
-//   Screens call addListener to rebuild when state changes.
-//   Always call notifyListeners() after changing any state.
-//
-// RULES:
-//   - Always call SyncService.instance.syncAll(uid) after saves
-//   - Set isLoading=true before async, false in finally block
-//   - Never import screens — navigate via passed BuildContext
+// SYNC:
+//   syncAll() is always fire-and-forget wrapped in its own
+//   try/catch so a network failure NEVER corrupts local state.
 // ============================================================
 
-import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:uuid/uuid.dart';
+
 import '../../data/models/workout_model.dart';
 import '../../data/models/workout_exercise_model.dart';
 import '../../data/models/workout_session_model.dart';
 import '../../data/models/session_log_model.dart';
 import '../../data/models/exercise_model.dart';
-import '../../data/models/activity_model.dart';
 import '../../data/local/local_workout_service.dart';
 import '../../data/local/local_session_service.dart';
 import '../../data/local/local_exercise_service.dart';
-import '../../data/local/local_activity_service.dart';
 import '../../data/remote/remote_exercise_service.dart';
 import '../../data/sync/sync_service.dart';
+import 'workout_state.dart';
 
-class WorkoutController extends ChangeNotifier {
+// Imports below are commented out until services are implemented:
+// import '../../data/models/activity_model.dart';
+// import '../../data/local/local_activity_service.dart';
 
-  // ── Exposed state ────────────────────────────────────────
-  bool isLoading = false;
-  String? errorMessage;
-  List<WorkoutModel> workouts = [];
-  List<ExerciseModel> searchResults = [];
-  WorkoutSessionModel? activeSession;
-
-  // UUID generator — creates unique ids for new records
+class WorkoutController extends Cubit<WorkoutState> {
   final _uuid = const Uuid();
+
+  // In-memory cache — avoids re-querying SQLite after every
+  // save/delete. Always kept in sync with the database.
+  List<WorkoutModel> _workouts = [];
+
+  WorkoutController() : super(WorkoutInitial());
 
   // ═══════════════════════════════════════════════════════════
   // WORKOUT LOADING
   // ═══════════════════════════════════════════════════════════
 
-  // ----------------------------------------------------------
-  // loadWorkouts()
-  // Fetches all workouts for this user from SQLite.
-  // Stores them in the 'workouts' list and calls notifyListeners
-  // so workout_list_screen rebuilds with the new data.
-  // Called in workout_list_screen's initState().
-  // ----------------------------------------------------------
+  /// Loads all workouts (predefined + user's own) from SQLite.
+  /// Called once in WorkoutsListScreen.initState().
   Future<void> loadWorkouts(String userId) async {
-    isLoading = true;
-    errorMessage = null;
-    notifyListeners(); // tell screen: start showing LoadingWidget
-
+    emit(WorkoutLoading());
     try {
-      workouts =
-          await LocalWorkoutService.instance.getAllWorkouts(userId);
+      _workouts = await LocalWorkoutService.instance.getAllWorkouts(userId);
+      emit(WorkoutLoaded(workouts: _workouts));
     } catch (e) {
-      errorMessage = 'Could not load workouts. Please try again.';
-    } finally {
-      // Always set isLoading=false — even if an error occurred
-      isLoading = false;
-      notifyListeners(); // tell screen: stop showing LoadingWidget
+      emit(WorkoutError(message: 'Could not load workouts. Please try again.'));
     }
   }
 
@@ -96,146 +70,146 @@ class WorkoutController extends ChangeNotifier {
   // WORKOUT CRUD
   // ═══════════════════════════════════════════════════════════
 
-  // ----------------------------------------------------------
-  // saveWorkout()
-  // Saves a new workout with its exercises to SQLite.
-  // Order of operations:
-  //   1. Insert the workout row
-  //   2. Insert each workout_exercise row with orderIndex = i
-  //   3. Add workout to local list (so UI updates immediately)
-  //   4. Call syncAll to push to Firestore if online
-  // ----------------------------------------------------------
+  /// Saves a workout + its exercises to SQLite then syncs.
+  ///
+  /// Works for both CREATE and EDIT:
+  ///   CREATE → insert workout row + all exercise rows
+  ///   EDIT   → replace workout row, delete ALL old exercise rows
+  ///            first, then re-insert the current list.
+  ///
+  /// ORDER IS CRITICAL:
+  ///   1. insertWorkout (replace if exists)
+  ///   2. deleteExercisesForWorkout (wipe old rows)
+  ///   3. insertWorkoutExercise × N (insert current list)
+  ///   Wrong order = exercises wiped after insertion.
   Future<void> saveWorkout(
     WorkoutModel workout,
     List<WorkoutExerciseModel> exercises,
-    String uid, // Firebase uid for sync subcollection paths
+    String uid,
   ) async {
-    isLoading = true;
-    errorMessage = null;
-    notifyListeners();
-
+    emit(WorkoutLoading());
     try {
-      // 1. Insert the workout template
+      // Step 1 — insert/replace the workout row.
       await LocalWorkoutService.instance.insertWorkout(workout);
 
-      // 2. Insert each exercise with its position in the workout
+      // Step 2 — delete ALL old exercise rows BEFORE inserting.
+      // On CREATE this is a no-op (nothing to delete).
+      // On EDIT this removes any exercises the user removed.
+      await LocalWorkoutService.instance.deleteExercisesForWorkout(workout.id);
+
+      // Step 3 — insert the current exercise list with correct order.
       for (int i = 0; i < exercises.length; i++) {
-        // Assign workoutId and orderIndex before inserting
-        final we = exercises[i].copyWith(
-          workoutId: workout.id,
-          orderIndex: i, // position 0, 1, 2... determines display order
-        );
+        final we = exercises[i].copyWith(workoutId: workout.id, orderIndex: i);
         await LocalWorkoutService.instance.insertWorkoutExercise(we);
       }
 
-      // 3. Add to local list so list screen updates without reload
-      workouts.insert(0, workout);
+      // Update in-memory cache without re-querying SQLite.
+      final existingIndex = _workouts.indexWhere((w) => w.id == workout.id);
+      if (existingIndex >= 0) {
+        _workouts[existingIndex] = workout; // edit: replace in place
+      } else {
+        _workouts.insert(0, workout); // create: prepend
+      }
 
-      // 4. Push to Firestore in background (non-blocking)
-      await SyncService.instance.syncAll(uid);
+      emit(WorkoutLoaded(workouts: _workouts));
+
+      // Sync is fire-and-forget — network failure must never
+      // affect the local success state already emitted above.
+      _syncSilently(uid);
     } catch (e) {
-      errorMessage = 'Could not save workout. Please try again.';
-    } finally {
-      isLoading = false;
-      notifyListeners();
+      emit(WorkoutError(message: 'Could not save workout. Please try again.'));
     }
   }
 
-  // ----------------------------------------------------------
-  // deleteWorkout()
-  // Deletes a workout and ALL its associated exercises.
-  // Order matters:
-  //   1. Delete workout_exercises rows first (foreign key child)
-  //   2. Then delete the workout row (parent)
-  //   3. Remove from local list for immediate UI update
-  //   4. Sync to Firestore
-  // ----------------------------------------------------------
+  /// Deletes a workout and all its linked exercises.
+  /// Child rows deleted BEFORE parent — avoids orphan rows.
   Future<void> deleteWorkout(String workoutId, String uid) async {
+    emit(WorkoutLoading());
     try {
-      // 1. Delete child rows first
-      await LocalWorkoutService.instance
-          .deleteExercisesForWorkout(workoutId);
-
-      // 2. Delete the parent row
+      // Delete children first, then parent.
+      await LocalWorkoutService.instance.deleteExercisesForWorkout(workoutId);
       await LocalWorkoutService.instance.deleteWorkout(workoutId);
 
-      // 3. Remove from in-memory list → list screen rebuilds
-      workouts.removeWhere((w) => w.id == workoutId);
-      notifyListeners();
+      _workouts.removeWhere((w) => w.id == workoutId);
+      emit(WorkoutLoaded(workouts: _workouts));
 
-      // 4. Sync the deletion to Firestore
-      await SyncService.instance.syncAll(uid);
+      // Fire-and-forget sync.
+      _syncSilently(uid);
     } catch (e) {
-      errorMessage = 'Could not delete workout.';
-      notifyListeners();
+      emit(WorkoutError(message: 'Could not delete workout.'));
     }
   }
 
-  // ----------------------------------------------------------
-  // getExercisesForWorkout()
-  // Returns all exercises for a workout from SQLite.
-  // Already ordered by orderIndex ASC from the service.
-  // Called by workout_overview_screen and workout_session_screen.
-  // ----------------------------------------------------------
+  /// Returns exercises for a workout ordered by orderIndex ASC.
+  /// Does NOT emit state — screen awaits this in initState.
   Future<List<WorkoutExerciseModel>> getExercisesForWorkout(
-      String workoutId) async {
-    return await LocalWorkoutService.instance
-        .getExercisesForWorkout(workoutId);
+    String workoutId,
+  ) async {
+    return LocalWorkoutService.instance.getExercisesForWorkout(workoutId);
+  }
+
+  // ═══════════════════════════════════════════════════════════
+  // EXERCISE NAME RESOLUTION
+  // ═══════════════════════════════════════════════════════════
+
+  /// Maps exerciseId → ExerciseModel for display in tiles.
+  ///
+  /// CRITICAL: Call ONLY in initState — never in build() or
+  /// inside a ListView.builder().
+  ///
+  /// Returns a Map so screens can look up name + muscles once
+  /// and store the result in local state.
+  Future<Map<String, ExerciseModel>> resolveExerciseNames(
+    List<WorkoutExerciseModel> exercises,
+  ) async {
+    final Map<String, ExerciseModel> map = {};
+    for (final we in exercises) {
+      if (map.containsKey(we.exerciseId)) continue;
+      final exercise = await LocalExerciseService.instance.getExerciseById(
+        we.exerciseId,
+      );
+      if (exercise != null) map[we.exerciseId] = exercise;
+    }
+    return map;
+  }
+
+  /// Returns a single ExerciseModel by id, or null if not found.
+  Future<ExerciseModel?> getExerciseById(String exerciseId) async {
+    return LocalExerciseService.instance.getExerciseById(exerciseId);
   }
 
   // ═══════════════════════════════════════════════════════════
   // SESSION MANAGEMENT
   // ═══════════════════════════════════════════════════════════
 
-  // ----------------------------------------------------------
-  // startSession()
-  // Creates a new WorkoutSessionModel with:
-  //   - a fresh UUID as id
-  //   - endTime = null (session is active)
-  //   - all totals = 0 (filled in when session finishes)
-  // Inserts it to SQLite and stores as activeSession.
-  // Returns the session so the screen can pass it forward.
-  // ----------------------------------------------------------
+  /// Creates an active session row in SQLite (endTime = null).
+  /// Emits WorkoutSessionActive so ActiveSessionScreen can
+  /// listen and navigate with the session object.
   Future<WorkoutSessionModel> startSession(
-      String workoutId, String userId) async {
+    String workoutId,
+    String userId,
+  ) async {
     final now = DateTime.now();
-
     final session = WorkoutSessionModel(
-      id: _uuid.v4(),   // random UUID
+      id: _uuid.v4(),
       workoutId: workoutId,
       userId: userId,
       startTime: now,
-      endTime: null,    // null = session is currently active
+      endTime: null,
       totalVolume: 0,
       totalDuration: 0,
       caloriesBurned: 0,
       updatedAt: now,
-      isSynced: false,  // will be pushed to Firestore after finish
+      isSynced: false,
     );
-
     await LocalSessionService.instance.insertSession(session);
-
-    // Store as activeSession so other parts of app can check
-    activeSession = session;
-    notifyListeners();
-
+    emit(WorkoutSessionActive(activeSession: session));
     return session;
   }
 
-  // ----------------------------------------------------------
-  // logSet()
-  // Records one completed set during an active session.
-  // Called each time the user checks a set checkbox.
-  // Creates a SessionLogModel and inserts it to SQLite.
-  // Returns the log so it can be added to the screen's local list.
-  //
-  // Parameters:
-  //   sessionId  → the active session's id
-  //   exerciseId → which exercise this set belongs to
-  //   setNumber  → 1-based set number (Set 1, Set 2, Set 3...)
-  //   reps       → how many reps the user did
-  //   weight     → weight in kg, null for bodyweight exercises
-  // ----------------------------------------------------------
+  /// Records one completed set in SQLite.
+  /// Does NOT emit state — ActiveSessionScreen manages its own
+  /// checked-set list with setState for instant responsiveness.
   Future<SessionLogModel> logSet({
     required String sessionId,
     required String exerciseId,
@@ -244,149 +218,76 @@ class WorkoutController extends ChangeNotifier {
     double? weight,
   }) async {
     final now = DateTime.now();
-
     final log = SessionLogModel(
       id: _uuid.v4(),
       sessionId: sessionId,
       exerciseId: exerciseId,
       setNumber: setNumber,
       reps: reps,
-      weight: weight,    // null for bodyweight
-      isCompleted: true, // this set is done
+      weight: weight,
+      isCompleted: true,
       timestamp: now,
       updatedAt: now,
       isSynced: false,
     );
-
     await LocalSessionService.instance.insertSessionLog(log);
     return log;
   }
 
-  // ----------------------------------------------------------
-  // finishSession()
-  // Completes an active workout session. Steps:
-  //   1. Calculate totalVolume from all set logs
-  //   2. Calculate totalDuration from startTime to now
-  //   3. Estimate caloriesBurned (5 kcal per minute)
-  //   4. Update session in SQLite with all final values
-  //   5. Award +100 XP to user via _awardXp()
-  //   6. Clear activeSession
-  //   7. Call syncAll to push everything to Firestore
-  //
-  // Returns the completed session for workout_summary_screen.
-  // ----------------------------------------------------------
+  /// Completes a session: calculates totals, persists to SQLite,
+  /// emits WorkoutLoaded, then syncs in background.
+  ///
+  /// Returns the completed session so WorkoutSummaryScreen can
+  /// display duration/volume/calories without another DB call.
   Future<WorkoutSessionModel> finishSession(
     WorkoutSessionModel session,
     List<SessionLogModel> logs,
     String userId,
-    String uid, // Firebase uid for sync
+    String uid,
   ) async {
-    final endTime = DateTime.now();
+    emit(WorkoutLoading());
+    try {
+      final endTime = DateTime.now();
 
-    // Step 1: Calculate total volume
-    // totalVolume = sum of (reps × weight) for all completed sets
-    // Sets with null weight (bodyweight) contribute 0 to volume
-    double totalVolume = 0;
-    for (final log in logs) {
-      if (log.weight != null && log.isCompleted) {
-        totalVolume += log.reps * log.weight!;
+      // totalVolume = sum of reps × weight for weighted sets.
+      double totalVolume = 0;
+      for (final log in logs) {
+        if (log.isCompleted && log.weight != null) {
+          totalVolume += log.reps * log.weight!;
+        }
       }
-    }
 
-    // Step 2: Calculate total duration in seconds
-    final totalDuration =
-        endTime.difference(session.startTime).inSeconds;
+      final totalDuration = endTime.difference(session.startTime).inSeconds;
 
-    // Step 3: Estimate calories burned
-    // Rough estimate: 5 kcal per minute of exercise
-    final caloriesBurned = (totalDuration / 60 * 5).round();
+      // ~5 kcal/min is a standard rough estimate for resistance training.
+      final caloriesBurned = (totalDuration / 60 * 5).round();
 
-    // Step 4: Build the completed session with all final values
-    final completedSession = session.copyWith(
-      endTime: endTime,
-      totalVolume: totalVolume,
-      totalDuration: totalDuration,
-      caloriesBurned: caloriesBurned,
-      updatedAt: endTime,
-      isSynced: false, // will be pushed to Firestore by syncAll
-    );
-
-    // Persist the completed session to SQLite
-    await LocalSessionService.instance.updateSession(completedSession);
-
-    // Step 5: Award +100 XP and update level
-    await _awardXp(userId);
-
-    // Step 6: Clear active session state
-    activeSession = null;
-    notifyListeners();
-
-    // Step 7: Push everything to Firestore in background
-    await SyncService.instance.syncAll(uid);
-
-    return completedSession;
-  }
-
-  // ----------------------------------------------------------
-  // _awardXp()
-  // Private method — called only by finishSession().
-  // Awards +100 XP and recalculates level.
-  //
-  // First time (no activity row exists):
-  //   → Create a new activity row with totalXp=100
-  //
-  // Subsequent times (activity row already exists):
-  //   → Add 100 to existing totalXp
-  //   → Recalculate currentLevel and xpToNextLevel
-  //
-  // Level formula:
-  //   currentLevel  = totalXp ~/ 500   (~/ = integer division)
-  //   xpToNextLevel = ((currentLevel + 1) * 500) - totalXp
-  //
-  // Examples:
-  //   totalXp=0    → level=0, toNext=500
-  //   totalXp=100  → level=0, toNext=400
-  //   totalXp=500  → level=1, toNext=500
-  //   totalXp=600  → level=1, toNext=400
-  //   totalXp=1000 → level=2, toNext=500
-  // ----------------------------------------------------------
-  Future<void> _awardXp(String userId) async {
-    final existing =
-        await LocalActivityService.instance.getActivityForUser(userId);
-    final now = DateTime.now();
-
-    if (existing == null) {
-      // FIRST WORKOUT EVER — create the activity row
-      const int newTotalXp = 100;
-      final int level = newTotalXp ~/ 500; // = 0
-      final int xpToNext = ((level + 1) * 500) - newTotalXp; // = 400
-
-      await LocalActivityService.instance.insertActivity(
-        ActivityModel(
-          id: _uuid.v4(),
-          userId: userId,
-          totalXp: newTotalXp,
-          currentLevel: level,
-          xpToNextLevel: xpToNext,
-          updatedAt: now,
-          isSynced: false,
-        ),
+      final completedSession = session.copyWith(
+        endTime: endTime,
+        totalVolume: totalVolume,
+        totalDuration: totalDuration,
+        caloriesBurned: caloriesBurned,
+        updatedAt: endTime,
+        isSynced: false,
       );
-    } else {
-      // SUBSEQUENT WORKOUT — update existing activity row
-      final int newTotalXp = existing.totalXp + 100;
-      final int level = newTotalXp ~/ 500;
-      final int xpToNext = ((level + 1) * 500) - newTotalXp;
 
-      await LocalActivityService.instance.updateActivity(
-        existing.copyWith(
-          totalXp: newTotalXp,
-          currentLevel: level,
-          xpToNextLevel: xpToNext,
-          updatedAt: now,
-          isSynced: false,
-        ),
+      await LocalSessionService.instance.updateSession(completedSession);
+
+      // XP award stubbed — LocalActivityService not implemented yet.
+      // Restore when implemented:
+      // await _awardXp(userId);
+
+      emit(WorkoutLoaded(workouts: _workouts, activeSession: completedSession));
+
+      // Fire-and-forget sync.
+      _syncSilently(uid);
+
+      return completedSession;
+    } catch (e) {
+      emit(
+        WorkoutError(message: 'Could not finish session. Please try again.'),
       );
+      rethrow; // rethrow so caller can handle if needed
     }
   }
 
@@ -394,100 +295,53 @@ class WorkoutController extends ChangeNotifier {
   // EXERCISE SEARCH
   // ═══════════════════════════════════════════════════════════
 
-  // ----------------------------------------------------------
-  // searchExercises()
-  // Searches exercise names in SQLite using LIKE query.
-  // Updates searchResults and notifies listeners.
-  // Called on EVERY KEYSTROKE in ExerciseSearchField and
-  // exercise_search_screen — must stay very fast.
-  //
-  // Empty query → clears results (don't show stale results)
-  // ----------------------------------------------------------
+  /// LIKE search on exercise names. Called on every keystroke.
+  /// Empty query → emits empty results without hitting SQLite.
   Future<void> searchExercises(String query) async {
     if (query.trim().isEmpty) {
-      // Clear results when user deletes all text
-      searchResults = [];
-      notifyListeners();
+      emit(WorkoutSearchResults(results: []));
       return;
     }
-
     try {
-      searchResults = await LocalExerciseService.instance
-          .searchExercises(query.trim());
-      notifyListeners(); // rebuild dropdown in ExerciseSearchField
+      final results = await LocalExerciseService.instance.searchExercises(
+        query.trim(),
+      );
+      emit(WorkoutSearchResults(results: results));
     } catch (e) {
-      searchResults = [];
-      notifyListeners();
+      emit(WorkoutSearchResults(results: []));
     }
   }
 
-  // ----------------------------------------------------------
-  // loadAllExercises()
-  // Loads all exercises into searchResults.
-  // Called by exercise_search_screen on init when there is
-  // no search query yet — shows all 873 exercises by default.
-  // ----------------------------------------------------------
+  /// Loads all exercises from SQLite.
+  /// Called when ExerciseSearchScreen opens with empty query.
   Future<void> loadAllExercises() async {
     try {
-      searchResults =
-          await LocalExerciseService.instance.getAllExercises();
-      notifyListeners();
+      final all = await LocalExerciseService.instance.getAllExercises();
+      emit(WorkoutSearchResults(results: all));
     } catch (e) {
-      searchResults = [];
-      notifyListeners();
+      emit(WorkoutSearchResults(results: []));
     }
   }
 
   // ═══════════════════════════════════════════════════════════
-  // EXERCISE SEEDING (FIRST LAUNCH)
+  // SEEDING
   // ═══════════════════════════════════════════════════════════
 
-  // ----------------------------------------------------------
-  // seedExercisesIfNeeded()
-  // Checks if the exercises table in SQLite is empty.
-  // If empty → fetches all 873 exercises from Firestore and
-  //            bulk inserts them into SQLite.
-  // If not empty → returns immediately (already seeded).
-  //
-  // This runs ONCE on first app launch after login.
-  // It never runs again on the same device after that.
-  // Call this from the home_screen initState after login.
-  //
-  // If seeding fails (no internet on first launch), it fails
-  // silently — the app still works, just search is empty.
-  // On next launch when internet is available, it will seed.
-  // ----------------------------------------------------------
+  /// Seeds 873 exercises from Firestore into SQLite on first launch.
+  /// Called once from HomeScreen.initState().
+  /// Silent on error — app still works, just no exercise search.
   Future<void> seedExercisesIfNeeded() async {
     try {
-      // Check if exercises already exist in SQLite
-      final existing =
-          await LocalExerciseService.instance.getAllExercises();
+      final existing = await LocalExerciseService.instance.getAllExercises();
+      if (existing.isNotEmpty) return;
 
-      if (existing.isNotEmpty) {
-        // Already seeded — skip entirely
-        return;
-      }
+      final models = await RemoteExerciseService.instance.fetchAllExercises();
+      if (models.isEmpty) return;
 
-      // Fetch all exercise documents from Firestore
-      // This is the only Firestore READ in normal app flow
-      final remoteMaps =
-          await RemoteExerciseService.instance.fetchAllExercises();
-
-      if (remoteMaps.isEmpty) return;
-
-      // Convert raw Firestore maps to ExerciseModel objects
-      final models = remoteMaps
-          .map((map) => ExerciseModel.fromFirestore(map))
-          .toList();
-
-      // Bulk insert into SQLite using batch for performance
       await LocalExerciseService.instance.insertAllExercises(models);
-
-      print('WorkoutController: seeded ${models.length} exercises');
+      debugPrint('WorkoutController: seeded ${models.length} exercises');
     } catch (e) {
-      // Fail silently — don't crash the app if seeding fails
-      // User can still use the app, search will just be empty
-      print('WorkoutController: seeding failed → $e');
+      debugPrint('WorkoutController: seeding failed → $e');
     }
   }
 
@@ -495,25 +349,58 @@ class WorkoutController extends ChangeNotifier {
   // HISTORY
   // ═══════════════════════════════════════════════════════════
 
-  // ----------------------------------------------------------
-  // getSessionsForUser()
-  // Returns all completed sessions for workout_history_screen.
-  // Already ordered newest first from the service.
-  // ----------------------------------------------------------
-  Future<List<WorkoutSessionModel>> getSessionsForUser(
-      String userId) async {
-    return await LocalSessionService.instance
-        .getSessionsForUser(userId);
+  /// Returns all completed sessions ordered newest first.
+  /// Does NOT emit state — screen awaits in initState.
+  Future<List<WorkoutSessionModel>> getSessionsForUser(String userId) async {
+    return LocalSessionService.instance.getSessionsForUser(userId);
   }
 
-  // ----------------------------------------------------------
-  // getLogsForSession()
-  // Returns all set logs for one session.
-  // Used by workout_history_screen when user expands a card.
-  // ----------------------------------------------------------
-  Future<List<SessionLogModel>> getLogsForSession(
-      String sessionId) async {
-    return await LocalSessionService.instance
-        .getLogsForSession(sessionId);
+  /// Returns all set logs for one session ordered by setNumber ASC.
+  Future<List<SessionLogModel>> getLogsForSession(String sessionId) async {
+    return LocalSessionService.instance.getLogsForSession(sessionId);
   }
+
+  // ═══════════════════════════════════════════════════════════
+  // PRIVATE HELPERS
+  // ═══════════════════════════════════════════════════════════
+
+  /// Fires syncAll in the background.
+  /// A network error is logged but NEVER propagates to the UI —
+  /// local state has already been committed and emitted.
+  void _syncSilently(String uid) {
+    SyncService.instance.syncAll(uid).catchError((e) {
+      debugPrint('WorkoutController: background sync failed → $e');
+    });
+  }
+
+  // Stub — restore when LocalActivityService is implemented:
+  //
+  // Future<void> _awardXp(String userId) async {
+  //   final current =
+  //       await LocalActivityService.instance.getActivityForUser(userId);
+  //   final now = DateTime.now();
+  //   if (current == null) {
+  //     final newActivity = ActivityModel(
+  //       id:            const Uuid().v4(),
+  //       userId:        userId,
+  //       totalXp:       100,
+  //       currentLevel:  0,
+  //       xpToNextLevel: 400,
+  //       updatedAt:     now,
+  //       isSynced:      false,
+  //     );
+  //     await LocalActivityService.instance.insertActivity(newActivity);
+  //   } else {
+  //     final newXp     = current.totalXp + 100;
+  //     final newLevel  = newXp ~/ 500;
+  //     final updated = current.copyWith(
+  //       totalXp:       newXp,
+  //       currentLevel:  newLevel,
+  //       xpToNextLevel: ((newLevel + 1) * 500) - newXp,
+  //       updatedAt:     now,
+  //       isSynced:      false,
+  //     );
+  //     await LocalActivityService.instance.updateActivity(updated);
+  //   }
+  // }
 }

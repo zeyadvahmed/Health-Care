@@ -47,7 +47,7 @@ class SparkSteelApp extends StatelessWidget {
       //   logged in  → HomeScreen
       //   logged out → LoginScreen
       //   checking   → splash UI
-      initialRoute: AppRoutes.mentalHealth,
+      initialRoute: AppRoutes.workoutList,
 
       // ── All named routes ───────────────────────────────────
       // Every screen registered here.
