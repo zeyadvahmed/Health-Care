@@ -42,6 +42,7 @@ import 'workout_state.dart';
 // import '../../data/local/local_activity_service.dart';
 
 class WorkoutController extends Cubit<WorkoutState> {
+
   final _uuid = const Uuid();
 
   // In-memory cache — avoids re-querying SQLite after every
@@ -59,10 +60,12 @@ class WorkoutController extends Cubit<WorkoutState> {
   Future<void> loadWorkouts(String userId) async {
     emit(WorkoutLoading());
     try {
-      _workouts = await LocalWorkoutService.instance.getAllWorkouts(userId);
+      _workouts = await LocalWorkoutService.instance
+          .getAllWorkouts(userId);
       emit(WorkoutLoaded(workouts: _workouts));
     } catch (e) {
-      emit(WorkoutError(message: 'Could not load workouts. Please try again.'));
+      emit(WorkoutError(
+          message: 'Could not load workouts. Please try again.'));
     }
   }
 
@@ -95,16 +98,21 @@ class WorkoutController extends Cubit<WorkoutState> {
       // Step 2 — delete ALL old exercise rows BEFORE inserting.
       // On CREATE this is a no-op (nothing to delete).
       // On EDIT this removes any exercises the user removed.
-      await LocalWorkoutService.instance.deleteExercisesForWorkout(workout.id);
+      await LocalWorkoutService.instance
+          .deleteExercisesForWorkout(workout.id);
 
       // Step 3 — insert the current exercise list with correct order.
       for (int i = 0; i < exercises.length; i++) {
-        final we = exercises[i].copyWith(workoutId: workout.id, orderIndex: i);
+        final we = exercises[i].copyWith(
+          workoutId:  workout.id,
+          orderIndex: i,
+        );
         await LocalWorkoutService.instance.insertWorkoutExercise(we);
       }
 
       // Update in-memory cache without re-querying SQLite.
-      final existingIndex = _workouts.indexWhere((w) => w.id == workout.id);
+      final existingIndex =
+          _workouts.indexWhere((w) => w.id == workout.id);
       if (existingIndex >= 0) {
         _workouts[existingIndex] = workout; // edit: replace in place
       } else {
@@ -117,8 +125,20 @@ class WorkoutController extends Cubit<WorkoutState> {
       // affect the local success state already emitted above.
       _syncSilently(uid);
     } catch (e) {
-      emit(WorkoutError(message: 'Could not save workout. Please try again.'));
+      emit(WorkoutError(
+          message: 'Could not save workout. Please try again.'));
     }
+  }
+
+  /// Deletes a single exercise row from workout_exercises by its id.
+  /// Used by WorkoutOverviewScreen when the user removes one exercise.
+  /// Does NOT delete the parent workout row.
+  /// Does NOT emit state — screen updates its own local list via setState.
+  Future<void> deleteSingleExercise(
+      String exerciseRowId, String uid) async {
+    await LocalWorkoutService.instance
+        .deleteWorkoutExercise(exerciseRowId);
+    _syncSilently(uid);
   }
 
   /// Deletes a workout and all its linked exercises.
@@ -127,7 +147,8 @@ class WorkoutController extends Cubit<WorkoutState> {
     emit(WorkoutLoading());
     try {
       // Delete children first, then parent.
-      await LocalWorkoutService.instance.deleteExercisesForWorkout(workoutId);
+      await LocalWorkoutService.instance
+          .deleteExercisesForWorkout(workoutId);
       await LocalWorkoutService.instance.deleteWorkout(workoutId);
 
       _workouts.removeWhere((w) => w.id == workoutId);
@@ -143,9 +164,9 @@ class WorkoutController extends Cubit<WorkoutState> {
   /// Returns exercises for a workout ordered by orderIndex ASC.
   /// Does NOT emit state — screen awaits this in initState.
   Future<List<WorkoutExerciseModel>> getExercisesForWorkout(
-    String workoutId,
-  ) async {
-    return LocalWorkoutService.instance.getExercisesForWorkout(workoutId);
+      String workoutId) async {
+    return LocalWorkoutService.instance
+        .getExercisesForWorkout(workoutId);
   }
 
   // ═══════════════════════════════════════════════════════════
@@ -160,14 +181,12 @@ class WorkoutController extends Cubit<WorkoutState> {
   /// Returns a Map so screens can look up name + muscles once
   /// and store the result in local state.
   Future<Map<String, ExerciseModel>> resolveExerciseNames(
-    List<WorkoutExerciseModel> exercises,
-  ) async {
+      List<WorkoutExerciseModel> exercises) async {
     final Map<String, ExerciseModel> map = {};
     for (final we in exercises) {
       if (map.containsKey(we.exerciseId)) continue;
-      final exercise = await LocalExerciseService.instance.getExerciseById(
-        we.exerciseId,
-      );
+      final exercise = await LocalExerciseService.instance
+          .getExerciseById(we.exerciseId);
       if (exercise != null) map[we.exerciseId] = exercise;
     }
     return map;
@@ -186,21 +205,19 @@ class WorkoutController extends Cubit<WorkoutState> {
   /// Emits WorkoutSessionActive so ActiveSessionScreen can
   /// listen and navigate with the session object.
   Future<WorkoutSessionModel> startSession(
-    String workoutId,
-    String userId,
-  ) async {
+      String workoutId, String userId) async {
     final now = DateTime.now();
     final session = WorkoutSessionModel(
-      id: _uuid.v4(),
-      workoutId: workoutId,
-      userId: userId,
-      startTime: now,
-      endTime: null,
-      totalVolume: 0,
-      totalDuration: 0,
+      id:             _uuid.v4(),
+      workoutId:      workoutId,
+      userId:         userId,
+      startTime:      now,
+      endTime:        null,
+      totalVolume:    0,
+      totalDuration:  0,
       caloriesBurned: 0,
-      updatedAt: now,
-      isSynced: false,
+      updatedAt:      now,
+      isSynced:       false,
     );
     await LocalSessionService.instance.insertSession(session);
     emit(WorkoutSessionActive(activeSession: session));
@@ -213,22 +230,22 @@ class WorkoutController extends Cubit<WorkoutState> {
   Future<SessionLogModel> logSet({
     required String sessionId,
     required String exerciseId,
-    required int setNumber,
-    required int reps,
-    double? weight,
+    required int    setNumber,
+    required int    reps,
+    double?         weight,
   }) async {
     final now = DateTime.now();
     final log = SessionLogModel(
-      id: _uuid.v4(),
-      sessionId: sessionId,
-      exerciseId: exerciseId,
-      setNumber: setNumber,
-      reps: reps,
-      weight: weight,
+      id:          _uuid.v4(),
+      sessionId:   sessionId,
+      exerciseId:  exerciseId,
+      setNumber:   setNumber,
+      reps:        reps,
+      weight:      weight,
       isCompleted: true,
-      timestamp: now,
-      updatedAt: now,
-      isSynced: false,
+      timestamp:   now,
+      updatedAt:   now,
+      isSynced:    false,
     );
     await LocalSessionService.instance.insertSessionLog(log);
     return log;
@@ -257,36 +274,40 @@ class WorkoutController extends Cubit<WorkoutState> {
         }
       }
 
-      final totalDuration = endTime.difference(session.startTime).inSeconds;
+      final totalDuration =
+          endTime.difference(session.startTime).inSeconds;
 
       // ~5 kcal/min is a standard rough estimate for resistance training.
       final caloriesBurned = (totalDuration / 60 * 5).round();
 
       final completedSession = session.copyWith(
-        endTime: endTime,
-        totalVolume: totalVolume,
-        totalDuration: totalDuration,
+        endTime:        endTime,
+        totalVolume:    totalVolume,
+        totalDuration:  totalDuration,
         caloriesBurned: caloriesBurned,
-        updatedAt: endTime,
-        isSynced: false,
+        updatedAt:      endTime,
+        isSynced:       false,
       );
 
-      await LocalSessionService.instance.updateSession(completedSession);
+      await LocalSessionService.instance
+          .updateSession(completedSession);
 
       // XP award stubbed — LocalActivityService not implemented yet.
       // Restore when implemented:
       // await _awardXp(userId);
 
-      emit(WorkoutLoaded(workouts: _workouts, activeSession: completedSession));
+      emit(WorkoutLoaded(
+        workouts:      _workouts,
+        activeSession: completedSession,
+      ));
 
       // Fire-and-forget sync.
       _syncSilently(uid);
 
       return completedSession;
     } catch (e) {
-      emit(
-        WorkoutError(message: 'Could not finish session. Please try again.'),
-      );
+      emit(WorkoutError(
+          message: 'Could not finish session. Please try again.'));
       rethrow; // rethrow so caller can handle if needed
     }
   }
@@ -303,9 +324,8 @@ class WorkoutController extends Cubit<WorkoutState> {
       return;
     }
     try {
-      final results = await LocalExerciseService.instance.searchExercises(
-        query.trim(),
-      );
+      final results = await LocalExerciseService.instance
+          .searchExercises(query.trim());
       emit(WorkoutSearchResults(results: results));
     } catch (e) {
       emit(WorkoutSearchResults(results: []));
@@ -316,7 +336,8 @@ class WorkoutController extends Cubit<WorkoutState> {
   /// Called when ExerciseSearchScreen opens with empty query.
   Future<void> loadAllExercises() async {
     try {
-      final all = await LocalExerciseService.instance.getAllExercises();
+      final all =
+          await LocalExerciseService.instance.getAllExercises();
       emit(WorkoutSearchResults(results: all));
     } catch (e) {
       emit(WorkoutSearchResults(results: []));
@@ -332,14 +353,18 @@ class WorkoutController extends Cubit<WorkoutState> {
   /// Silent on error — app still works, just no exercise search.
   Future<void> seedExercisesIfNeeded() async {
     try {
-      final existing = await LocalExerciseService.instance.getAllExercises();
+      final existing =
+          await LocalExerciseService.instance.getAllExercises();
       if (existing.isNotEmpty) return;
 
-      final models = await RemoteExerciseService.instance.fetchAllExercises();
+      final models =
+          await RemoteExerciseService.instance.fetchAllExercises();
       if (models.isEmpty) return;
 
-      await LocalExerciseService.instance.insertAllExercises(models);
-      debugPrint('WorkoutController: seeded ${models.length} exercises');
+      await LocalExerciseService.instance
+          .insertAllExercises(models);
+      debugPrint(
+          'WorkoutController: seeded ${models.length} exercises');
     } catch (e) {
       debugPrint('WorkoutController: seeding failed → $e');
     }
@@ -351,13 +376,16 @@ class WorkoutController extends Cubit<WorkoutState> {
 
   /// Returns all completed sessions ordered newest first.
   /// Does NOT emit state — screen awaits in initState.
-  Future<List<WorkoutSessionModel>> getSessionsForUser(String userId) async {
+  Future<List<WorkoutSessionModel>> getSessionsForUser(
+      String userId) async {
     return LocalSessionService.instance.getSessionsForUser(userId);
   }
 
   /// Returns all set logs for one session ordered by setNumber ASC.
-  Future<List<SessionLogModel>> getLogsForSession(String sessionId) async {
-    return LocalSessionService.instance.getLogsForSession(sessionId);
+  Future<List<SessionLogModel>> getLogsForSession(
+      String sessionId) async {
+    return LocalSessionService.instance
+        .getLogsForSession(sessionId);
   }
 
   // ═══════════════════════════════════════════════════════════
