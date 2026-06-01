@@ -31,8 +31,8 @@
 
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:sparksteel/core/constants/app_colors.dart';
-
+import 'package:sparlsteel/core/constants/app_colors.dart';
+import 'package:sparlsteel/core/constants/app_strings.dart';
 
 class RestTimerDialog extends StatefulWidget {
   // Starting countdown value (from WorkoutExerciseModel.restSeconds)
@@ -111,18 +111,16 @@ class _RestTimerDialogState extends State<RestTimerDialog> {
     widget.onReset();
   }
 
-  // Progress for the circular ring: 0.0 (full) to 1.0 (empty)
-  // As time passes, value increases toward 1.0
+  // Progress for the circular ring: 0.0 (full) to 1.0 (empty).
+  // Guard against division by zero if seconds is ever 0.
   double get _progress =>
-      1 - (_remaining / widget.seconds);
+      widget.seconds == 0 ? 1.0 : 1 - (_remaining / widget.seconds);
 
   @override
   Widget build(BuildContext context) {
     return Dialog(
       backgroundColor: AppColors.cardBackground,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: Padding(
         padding: const EdgeInsets.all(32),
         child: Column(
@@ -130,7 +128,7 @@ class _RestTimerDialogState extends State<RestTimerDialog> {
           children: [
             // Dialog title
             Text(
-              'Rest Time',
+              AppStrings.restTimer,
               style: const TextStyle(
                 color: Colors.white,
                 fontSize: 18,
@@ -151,7 +149,7 @@ class _RestTimerDialogState extends State<RestTimerDialog> {
                     value: 1.0,
                     strokeWidth: 8,
                     color: AppColors.cardBackground,
-                    backgroundColor: Colors.white12,
+                    backgroundColor: Colors.white.withValues(alpha: 0.12),
                   ),
                   // Foreground depleting ring (blue)
                   CircularProgressIndicator(
@@ -178,11 +176,8 @@ class _RestTimerDialogState extends State<RestTimerDialog> {
             const SizedBox(height: 8),
 
             Text(
-              'seconds remaining',
-              style: TextStyle(
-                color: AppColors.textSecondary,
-                fontSize: 12,
-              ),
+              AppStrings.secondsLeft,
+              style: TextStyle(color: AppColors.textHint, fontSize: 12),
             ),
             const SizedBox(height: 28),
 
@@ -201,7 +196,7 @@ class _RestTimerDialogState extends State<RestTimerDialog> {
                       padding: const EdgeInsets.symmetric(vertical: 12),
                     ),
                     child: Text(
-                      'Reset',
+                      AppStrings.resetButton,
                       style: TextStyle(color: AppColors.steelColor),
                     ),
                   ),
@@ -223,7 +218,7 @@ class _RestTimerDialogState extends State<RestTimerDialog> {
                       padding: const EdgeInsets.symmetric(vertical: 12),
                     ),
                     child: const Text(
-                      'Skip',
+                      AppStrings.skipButton,
                       style: TextStyle(color: Colors.white),
                     ),
                   ),
