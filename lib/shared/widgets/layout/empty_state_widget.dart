@@ -20,8 +20,7 @@
 // ============================================================
 
 import 'package:flutter/material.dart';
-import 'package:sparlsteel/core/constants/app_colors.dart';
-
+import 'package:sparksteel/core/constants/app_colors.dart';
 class EmptyStateWidget extends StatelessWidget {
   // Icon shown above the message.
   final IconData icon;

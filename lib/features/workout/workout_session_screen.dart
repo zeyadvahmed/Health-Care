@@ -52,7 +52,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:sparlsteel/shared/widgets/cards/rest_timer_dialog.dart';
+import 'package:sparksteel/shared/widgets/cards/rest_timer_dialog.dart';
 
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_strings.dart';

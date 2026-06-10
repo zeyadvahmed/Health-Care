@@ -1,10 +1,10 @@
 {
   "roots": [
-    "sparlsteel"
+    "sparksteel"
   ],
   "packages": [
     {
-      "name": "sparlsteel",
+      "name": "sparksteel",
       "version": "1.0.0+1",
       "dependencies": [
         "cloud_firestore",
