@@ -31,8 +31,8 @@
 
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:sparlsteel/core/constants/app_colors.dart';
-import 'package:sparlsteel/core/constants/app_strings.dart';
+import 'package:sparksteel/core/constants/app_colors.dart';
+import 'package:sparksteel/core/constants/app_strings.dart';
 
 class RestTimerDialog extends StatefulWidget {
   // Starting countdown value (from WorkoutExerciseModel.restSeconds)

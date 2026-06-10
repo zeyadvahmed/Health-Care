@@ -136,13 +136,27 @@ class WorkoutModel {
   // ----------------------------------------------------------
   // copyWith()
   // Returns a new WorkoutModel with only specified fields changed.
-  // Used by workout_controller when finishing edits.
+  //
+  // DESCRIPTION SENTINEL:
+  //   Standard ?? pattern cannot clear a nullable field back to null
+  //   because null ?? this.description returns the old value.
+  //   Solution: use a private sentinel object. If the caller passes
+  //   clearDescription: true, description is set to null regardless
+  //   of what the description param is.
+  //
+  //   Example — clear description:
+  //     workout.copyWith(clearDescription: true)
+  //   Example — update description:
+  //     workout.copyWith(description: 'New focus')
+  //   Example — leave description unchanged:
+  //     workout.copyWith(name: 'New name')
   // ----------------------------------------------------------
   WorkoutModel copyWith({
     String? id,
     String? userId,
     String? name,
     String? description,
+    bool clearDescription = false,
     String? difficulty,
     int? durationMinutes,
     bool? isPredefined,
@@ -155,7 +169,7 @@ class WorkoutModel {
       id: id ?? this.id,
       userId: userId ?? this.userId,
       name: name ?? this.name,
-      description: description ?? this.description,
+      description: clearDescription ? null : (description ?? this.description),
       difficulty: difficulty ?? this.difficulty,
       durationMinutes: durationMinutes ?? this.durationMinutes,
       isPredefined: isPredefined ?? this.isPredefined,
