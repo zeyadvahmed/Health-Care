@@ -42,34 +42,15 @@ import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_strings.dart';
 import '../../core/utils/helpers.dart';
 import '../../data/models/workout_model.dart';
-import '../../data/models/workout_exercise_model.dart';
 import 'workout_controller.dart';
 import 'workout_state.dart';
+import 'workout_session_screen.dart'; // provides ResolvedExercise
 import 'create_workout_screen.dart';
-// Uncomment when ActiveSessionScreen is built:
-// import 'active_session_screen.dart';
 
 // ── File-level color constants ─────────────────────────────────
 // TODO: Move into AppColors once design palette is finalised.
-const Color _kCardBg      = Color(0xFF0D3358); // card / tile background
-const Color _kInfoCardBg  = Color(0xFF0A2540); // "Ready to start?" card
-
-// ─────────────────────────────────────────────────────────────
-// _ResolvedExercise
-// Holds a WorkoutExerciseModel alongside its resolved display
-// strings so we never call resolveExerciseNames() in build().
-// ─────────────────────────────────────────────────────────────
-class _ResolvedExercise {
-  final WorkoutExerciseModel model;
-  final String displayName;
-  final String muscleGroup;   // primaryMuscles.join(', ')
-
-  const _ResolvedExercise({
-    required this.model,
-    required this.displayName,
-    required this.muscleGroup,
-  });
-}
+const Color _kCardBg = Color(0xFF0D3358); // card / tile background
+const Color _kInfoCardBg = Color(0xFF0A2540); // "Ready to start?" card
 
 // ─────────────────────────────────────────────────────────────
 // WorkoutOverviewScreen
@@ -85,15 +66,17 @@ class WorkoutOverviewScreen extends StatefulWidget {
   });
 
   @override
-  State<WorkoutOverviewScreen> createState() =>
-      _WorkoutOverviewScreenState();
+  State<WorkoutOverviewScreen> createState() => _WorkoutOverviewScreenState();
 }
 
-class _WorkoutOverviewScreenState
-    extends State<WorkoutOverviewScreen> {
+class _WorkoutOverviewScreenState extends State<WorkoutOverviewScreen> {
   // Resolved exercise list — populated in initState.
+  // Local mutable copy of the workout — refreshed from SQLite
+  // after _editWorkout() so name/duration update without popping.
+  late WorkoutModel _workout;
+
   // Never rebuilt from SQLite in build().
-  List<_ResolvedExercise> _exercises = [];
+  List<ResolvedExercise> _exercises = [];
 
   // Loading state for initState data fetch only.
   // Distinct from BlocBuilder state — this controls the
@@ -104,6 +87,8 @@ class _WorkoutOverviewScreenState
   @override
   void initState() {
     super.initState();
+    // Initialise local mutable copy from the incoming param.
+    _workout = widget.workout;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadExercises();
     });
@@ -115,8 +100,7 @@ class _WorkoutOverviewScreenState
   Future<void> _loadExercises() async {
     final ctrl = context.read<WorkoutController>();
 
-    final raw =
-        await ctrl.getExercisesForWorkout(widget.workout.id);
+    final raw = await ctrl.getExercisesForWorkout(_workout.id);
 
     // resolveExerciseNames() maps exerciseId → ExerciseModel.
     // CRITICAL: only called here in initState postFrameCallback.
@@ -126,11 +110,11 @@ class _WorkoutOverviewScreenState
     setState(() {
       _exercises = raw.map((we) {
         final ex = nameMap[we.exerciseId];
-        return _ResolvedExercise(
-          model:        we,
-          displayName:  ex?.name ?? we.exerciseId,
+        return ResolvedExercise(
+          model: we,
+          displayName: ex?.name ?? we.exerciseId,
           // primaryMuscles is List<String> — always join(', ')
-          muscleGroup:  ex?.primaryMuscles.join(', ') ?? '',
+          muscleGroup: ex?.primaryMuscles.join(', ') ?? '',
         );
       }).toList();
       _loadingExercises = false;
@@ -139,18 +123,37 @@ class _WorkoutOverviewScreenState
 
   // ── Computed helpers ──────────────────────────────────────
   String get _formattedDate {
-    const days   = ['Monday','Tuesday','Wednesday','Thursday',
-                    'Friday','Saturday','Sunday'];
-    const months = ['Jan','Feb','Mar','Apr','May','Jun',
-                    'Jul','Aug','Sep','Oct','Nov','Dec'];
+    const days = [
+      'Monday',
+      'Tuesday',
+      'Wednesday',
+      'Thursday',
+      'Friday',
+      'Saturday',
+      'Sunday',
+    ];
+    const months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
     final d = DateTime.now();
     // DateTime.weekday: 1=Mon … 7=Sun
     return '${days[d.weekday - 1]}, ${months[d.month - 1]} ${d.day}';
   }
 
   String get _estimatedTime {
-    final h = widget.workout.durationMinutes ~/ 60;
-    final m = widget.workout.durationMinutes % 60;
+    final h = _workout.durationMinutes ~/ 60;
+    final m = _workout.durationMinutes % 60;
     if (h > 0 && m > 0) return '${h}h ${m}min';
     if (h > 0) return '${h}h';
     return '${m}min';
@@ -161,10 +164,7 @@ class _WorkoutOverviewScreenState
   // and emits WorkoutSessionActive. BlocConsumer listener then
   // navigates to ActiveSessionScreen.
   void _startWorkout() {
-    context.read<WorkoutController>().startSession(
-          widget.workout.id,
-          widget.userId,
-        );
+    context.read<WorkoutController>().startSession(_workout.id, widget.userId);
   }
 
   // ── Edit workout ──────────────────────────────────────────
@@ -175,16 +175,23 @@ class _WorkoutOverviewScreenState
       context,
       MaterialPageRoute(
         builder: (_) => CreateWorkoutScreen(
-          userId:          widget.userId,
-          existingWorkout: widget.workout,
+          userId: widget.userId,
+          existingWorkout: _workout,
         ),
       ),
     );
-    // Reload exercises — user may have added/removed some.
-    if (mounted) {
-      setState(() => _loadingExercises = true);
-      await _loadExercises();
-    }
+    if (!mounted) return;
+    // Reload fresh workout from SQLite so name/duration update
+    // on this screen without the user having to pop and re-open.
+    final updated = await context.read<WorkoutController>().getWorkoutById(
+      _workout.id,
+    );
+    if (!mounted) return;
+    setState(() {
+      if (updated != null) _workout = updated;
+      _loadingExercises = true;
+    });
+    await _loadExercises();
   }
 
   // ── Delete single exercise ────────────────────────────────
@@ -196,12 +203,10 @@ class _WorkoutOverviewScreenState
       context: context,
       builder: (dialogCtx) => AlertDialog(
         backgroundColor: _kCardBg,
-        shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: const Text(
           'Remove Exercise',
-          style: TextStyle(
-              color: Colors.white, fontWeight: FontWeight.bold),
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
         content: Text(
           'Remove "${ex.displayName}" from this workout?',
@@ -236,16 +241,16 @@ class _WorkoutOverviewScreenState
   Future<void> _deleteExercise(int index) async {
     final we = _exercises[index].model;
     try {
-      await context
-          .read<WorkoutController>()
-          .deleteSingleExercise(we.id, widget.userId);
+      await context.read<WorkoutController>().deleteSingleExercise(
+        we.id,
+        widget.userId,
+      );
       if (mounted) {
         setState(() => _exercises.removeAt(index));
       }
     } catch (_) {
       if (mounted) {
-        Helpers.showErrorSnackBar(
-            context, 'Could not remove exercise.');
+        Helpers.showErrorSnackBar(context, 'Could not remove exercise.');
       }
     }
   }
@@ -260,8 +265,7 @@ class _WorkoutOverviewScreenState
       //   Any → SessionActive : startSession() completed
       listenWhen: (previous, current) =>
           (previous is WorkoutLoading &&
-              (current is WorkoutLoaded ||
-                  current is WorkoutError)) ||
+              (current is WorkoutLoaded || current is WorkoutError)) ||
           current is WorkoutSessionActive,
       listener: (context, state) {
         if (state is WorkoutError) {
@@ -269,22 +273,20 @@ class _WorkoutOverviewScreenState
         }
         if (state is WorkoutSessionActive) {
           // Navigate to ActiveSessionScreen — PASS DATA.
-          // Uncomment when ActiveSessionScreen is built:
-          // Navigator.push(
-          //   context,
-          //   MaterialPageRoute(
-          //     builder: (_) => ActiveSessionScreen(
-          //       session:   state.activeSession,
-          //       workout:   widget.workout,
-          //       exercises: _exercises
-          //           .map((e) => e.model)
-          //           .toList(),
-          //       userId:    widget.userId,
-          //     ),
-          //   ),
-          // );
-          Helpers.showSuccessSnackBar(
-              context, 'ActiveSessionScreen not built yet.');
+          // _exercises is List<ResolvedExercise> — pass directly.
+          // Do NOT call .map((e) => e.model) — that produces
+          // List<WorkoutExerciseModel> which is the wrong type.
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => WorkoutSessionScreen(
+                session: state.activeSession,
+                workout: widget.workout,
+                exercises: _exercises,
+                userId: widget.userId,
+              ),
+            ),
+          );
         }
       },
       builder: (context, state) {
@@ -321,15 +323,18 @@ class _WorkoutOverviewScreenState
       backgroundColor: AppColors.splashBackground,
       elevation: 0,
       leading: IconButton(
-        icon: const Icon(Icons.arrow_back_ios_new,
-            color: Colors.white, size: 20),
+        icon: const Icon(
+          Icons.arrow_back_ios_new,
+          color: Colors.white,
+          size: 20,
+        ),
         onPressed: () => Navigator.pop(context),
       ),
       title: const Text(
         AppStrings.workoutOverview,
         style: TextStyle(
-          color:      Colors.white,
-          fontSize:   18,
+          color: Colors.white,
+          fontSize: 18,
           fontWeight: FontWeight.bold,
         ),
       ),
@@ -337,8 +342,7 @@ class _WorkoutOverviewScreenState
       actions: [
         // Edit workout button — top right
         IconButton(
-          icon: const Icon(Icons.edit_outlined,
-              color: Colors.white, size: 20),
+          icon: const Icon(Icons.edit_outlined, color: Colors.white, size: 20),
           onPressed: _editWorkout,
           tooltip: 'Edit Workout',
         ),
@@ -373,10 +377,10 @@ class _WorkoutOverviewScreenState
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                widget.workout.name,
+                _workout.name,
                 style: const TextStyle(
-                  color:      Colors.white,
-                  fontSize:   22,
+                  color: Colors.white,
+                  fontSize: 22,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -384,7 +388,7 @@ class _WorkoutOverviewScreenState
               Text(
                 _formattedDate,
                 style: TextStyle(
-                  color:    Colors.white.withValues(alpha: 0.55),
+                  color: Colors.white.withValues(alpha: 0.55),
                   fontSize: 13,
                 ),
               ),
@@ -394,20 +398,19 @@ class _WorkoutOverviewScreenState
         const SizedBox(width: 12),
         // UPCOMING badge
         Container(
-          padding: const EdgeInsets.symmetric(
-              horizontal: 12, vertical: 5),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
           decoration: BoxDecoration(
-            color:        AppColors.steelColor.withValues(alpha: 0.18),
+            color: AppColors.steelColor.withValues(alpha: 0.18),
             borderRadius: BorderRadius.circular(20),
-            border:       Border.all(
+            border: Border.all(
               color: AppColors.steelColor.withValues(alpha: 0.5),
             ),
           ),
           child: Text(
             AppStrings.upcomingBadge,
             style: TextStyle(
-              color:      AppColors.steelColor,
-              fontSize:   11,
+              color: AppColors.steelColor,
+              fontSize: 11,
               fontWeight: FontWeight.bold,
               letterSpacing: 0.5,
             ),
@@ -422,24 +425,23 @@ class _WorkoutOverviewScreenState
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color:        _kInfoCardBg,
+        color: _kInfoCardBg,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-            color: AppColors.steelColor.withValues(alpha: 0.2)),
+        border: Border.all(color: AppColors.steelColor.withValues(alpha: 0.2)),
       ),
       child: Row(
         children: [
           Container(
-            width:  40,
+            width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color:        AppColors.steelColor.withValues(alpha: 0.15),
+              color: AppColors.steelColor.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Icon(
               Icons.timer_outlined,
               color: AppColors.steelColor,
-              size:  20,
+              size: 20,
             ),
           ),
           const SizedBox(width: 12),
@@ -450,8 +452,8 @@ class _WorkoutOverviewScreenState
                 const Text(
                   AppStrings.readyToStart,
                   style: TextStyle(
-                    color:      Colors.white,
-                    fontSize:   14,
+                    color: Colors.white,
+                    fontSize: 14,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -461,7 +463,7 @@ class _WorkoutOverviewScreenState
                   '${_exercises.length} '
                   '${_exercises.length == 1 ? 'exercise' : 'exercises'}',
                   style: TextStyle(
-                    color:    Colors.white.withValues(alpha: 0.55),
+                    color: Colors.white.withValues(alpha: 0.55),
                     fontSize: 12,
                   ),
                 ),
@@ -482,20 +484,18 @@ class _WorkoutOverviewScreenState
         Text(
           '${AppStrings.exerciseList} (${_exercises.length})',
           style: const TextStyle(
-            color:      Colors.white,
-            fontSize:   16,
+            color: Colors.white,
+            fontSize: 16,
             fontWeight: FontWeight.bold,
           ),
         ),
         const SizedBox(height: 12),
 
         // Loading skeleton
-        if (_loadingExercises)
-          _buildLoadingSkeleton(),
+        if (_loadingExercises) _buildLoadingSkeleton(),
 
         // Empty state
-        if (!_loadingExercises && _exercises.isEmpty)
-          _buildEmptyExercises(),
+        if (!_loadingExercises && _exercises.isEmpty) _buildEmptyExercises(),
 
         // Exercise tiles
         if (!_loadingExercises && _exercises.isNotEmpty)
@@ -503,9 +503,9 @@ class _WorkoutOverviewScreenState
             return Padding(
               padding: const EdgeInsets.only(bottom: 10),
               child: _ExerciseTile(
-                resolved:  _exercises[i],
-                onEdit:    () => _editWorkout(),
-                onDelete:  () => _confirmDeleteExercise(i),
+                resolved: _exercises[i],
+                onEdit: () => _editWorkout(),
+                onDelete: () => _confirmDeleteExercise(i),
               ),
             );
           }),
@@ -521,7 +521,7 @@ class _WorkoutOverviewScreenState
           height: 78,
           margin: const EdgeInsets.only(bottom: 10),
           decoration: BoxDecoration(
-            color:        _kCardBg,
+            color: _kCardBg,
             borderRadius: BorderRadius.circular(14),
           ),
           child: Padding(
@@ -529,9 +529,10 @@ class _WorkoutOverviewScreenState
             child: Row(
               children: [
                 Container(
-                  width: 40, height: 40,
+                  width: 40,
+                  height: 40,
                   decoration: BoxDecoration(
-                    color:        Colors.white.withValues(alpha: 0.08),
+                    color: Colors.white.withValues(alpha: 0.08),
                     borderRadius: BorderRadius.circular(10),
                   ),
                 ),
@@ -545,8 +546,7 @@ class _WorkoutOverviewScreenState
                         height: 12,
                         width: 140,
                         decoration: BoxDecoration(
-                          color: Colors.white
-                              .withValues(alpha: 0.1),
+                          color: Colors.white.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(6),
                         ),
                       ),
@@ -555,8 +555,7 @@ class _WorkoutOverviewScreenState
                         height: 10,
                         width: 90,
                         decoration: BoxDecoration(
-                          color: Colors.white
-                              .withValues(alpha: 0.07),
+                          color: Colors.white.withValues(alpha: 0.07),
                           borderRadius: BorderRadius.circular(6),
                         ),
                       ),
@@ -577,21 +576,19 @@ class _WorkoutOverviewScreenState
       width: double.infinity,
       padding: const EdgeInsets.symmetric(vertical: 28),
       decoration: BoxDecoration(
-        color:        _kCardBg,
+        color: _kCardBg,
         borderRadius: BorderRadius.circular(14),
-        border:       Border.all(
-            color: Colors.white.withValues(alpha: 0.08)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
       ),
       child: Column(
         children: [
-          Icon(Icons.fitness_center_outlined,
-              color: Colors.white24, size: 32),
+          Icon(Icons.fitness_center_outlined, color: Colors.white24, size: 32),
           const SizedBox(height: 10),
           Text(
             'No exercises in this workout.\nTap edit to add some.',
             textAlign: TextAlign.center,
             style: TextStyle(
-              color:    Colors.white.withValues(alpha: 0.35),
+              color: Colors.white.withValues(alpha: 0.35),
               fontSize: 13,
             ),
           ),
@@ -605,20 +602,21 @@ class _WorkoutOverviewScreenState
     return Container(
       color: AppColors.splashBackground,
       padding: EdgeInsets.fromLTRB(
-        16, 12, 16,
+        16,
+        12,
+        16,
         MediaQuery.of(context).padding.bottom + 12,
       ),
       child: SizedBox(
-        width:  double.infinity,
+        width: double.infinity,
         height: 52,
         child: ElevatedButton(
-          onPressed: isBusy || _exercises.isEmpty
-              ? null
-              : _startWorkout,
+          onPressed: isBusy || _exercises.isEmpty ? null : _startWorkout,
           style: ElevatedButton.styleFrom(
-            backgroundColor:         AppColors.steelColor,
-            disabledBackgroundColor: AppColors.steelColor
-                .withValues(alpha: 0.35),
+            backgroundColor: AppColors.steelColor,
+            disabledBackgroundColor: AppColors.steelColor.withValues(
+              alpha: 0.35,
+            ),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(14),
             ),
@@ -626,16 +624,18 @@ class _WorkoutOverviewScreenState
           ),
           child: isBusy
               ? const SizedBox(
-                  width:  22,
+                  width: 22,
                   height: 22,
-                  child:  CircularProgressIndicator(
-                      strokeWidth: 2, color: Colors.white),
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.white,
+                  ),
                 )
               : const Text(
                   AppStrings.startWorkout,
                   style: TextStyle(
-                    color:      Colors.white,
-                    fontSize:   16,
+                    color: Colors.white,
+                    fontSize: 16,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -652,9 +652,9 @@ class _WorkoutOverviewScreenState
 // Edit opens CreateWorkoutScreen. Delete shows confirm dialog.
 // ════════════════════════════════════════════════════════════
 class _ExerciseTile extends StatelessWidget {
-  final _ResolvedExercise resolved;
-  final VoidCallback       onEdit;
-  final VoidCallback       onDelete;
+  final ResolvedExercise resolved;
+  final VoidCallback onEdit;
+  final VoidCallback onDelete;
 
   const _ExerciseTile({
     required this.resolved,
@@ -668,7 +668,7 @@ class _ExerciseTile extends StatelessWidget {
 
     // "4 sets × 8-10 reps . 90s rest"
     final setRep = '${we.sets} sets × ${we.reps} reps';
-    final rest   = '${we.restSeconds}s rest';
+    final rest = '${we.restSeconds}s rest';
     final weight = we.weight != null
         ? '${we.weight!.toStringAsFixed(1)} kg'
         : 'Bodyweight';
@@ -676,7 +676,7 @@ class _ExerciseTile extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.fromLTRB(12, 12, 8, 12),
       decoration: BoxDecoration(
-        color:        _kCardBg,
+        color: _kCardBg,
         borderRadius: BorderRadius.circular(14),
       ),
       child: Row(
@@ -684,14 +684,17 @@ class _ExerciseTile extends StatelessWidget {
         children: [
           // Icon
           Container(
-            width:  40,
+            width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color:        AppColors.steelColor.withValues(alpha: 0.13),
+              color: AppColors.steelColor.withValues(alpha: 0.13),
               borderRadius: BorderRadius.circular(10),
             ),
-            child: Icon(Icons.fitness_center,
-                color: AppColors.steelColor, size: 19),
+            child: Icon(
+              Icons.fitness_center,
+              color: AppColors.steelColor,
+              size: 19,
+            ),
           ),
           const SizedBox(width: 12),
 
@@ -703,8 +706,8 @@ class _ExerciseTile extends StatelessWidget {
                 Text(
                   resolved.displayName,
                   style: const TextStyle(
-                    color:      Colors.white,
-                    fontSize:   14,
+                    color: Colors.white,
+                    fontSize: 14,
                     fontWeight: FontWeight.bold,
                   ),
                   maxLines: 1,
@@ -715,7 +718,7 @@ class _ExerciseTile extends StatelessWidget {
                   Text(
                     resolved.muscleGroup,
                     style: TextStyle(
-                      color:    Colors.white.withValues(alpha: 0.5),
+                      color: Colors.white.withValues(alpha: 0.5),
                       fontSize: 12,
                     ),
                     maxLines: 1,
@@ -728,12 +731,21 @@ class _ExerciseTile extends StatelessWidget {
                   spacing: 6,
                   runSpacing: 4,
                   children: [
-                    _chip(setRep, AppColors.steelColor,
-                        AppColors.steelColor.withValues(alpha: 0.13)),
-                    _chip(weight, Colors.white60,
-                        Colors.white.withValues(alpha: 0.07)),
-                    _chip(rest, Colors.white54,
-                        Colors.white.withValues(alpha: 0.07)),
+                    _chip(
+                      setRep,
+                      AppColors.steelColor,
+                      AppColors.steelColor.withValues(alpha: 0.13),
+                    ),
+                    _chip(
+                      weight,
+                      Colors.white60,
+                      Colors.white.withValues(alpha: 0.07),
+                    ),
+                    _chip(
+                      rest,
+                      Colors.white54,
+                      Colors.white.withValues(alpha: 0.07),
+                    ),
                   ],
                 ),
               ],
@@ -766,17 +778,16 @@ class _ExerciseTile extends StatelessWidget {
 
   Widget _chip(String label, Color textColor, Color bgColor) {
     return Container(
-      padding: const EdgeInsets.symmetric(
-          horizontal: 8, vertical: 3),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color:        bgColor,
+        color: bgColor,
         borderRadius: BorderRadius.circular(6),
       ),
       child: Text(
         label,
         style: TextStyle(
-          color:      textColor,
-          fontSize:   10,
+          color: textColor,
+          fontSize: 10,
           fontWeight: FontWeight.w500,
         ),
       ),
@@ -784,22 +795,20 @@ class _ExerciseTile extends StatelessWidget {
   }
 
   Widget _actionBtn(
-    IconData  icon,
-    String    label,
-    Color     color,
+    IconData icon,
+    String label,
+    Color color,
     VoidCallback onTap,
   ) {
     return GestureDetector(
-      onTap:    onTap,
+      onTap: onTap,
       behavior: HitTestBehavior.opaque,
       child: Container(
-        padding: const EdgeInsets.symmetric(
-            horizontal: 10, vertical: 5),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
         decoration: BoxDecoration(
-          color:        color.withValues(alpha: 0.1),
+          color: color.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(
-              color: color.withValues(alpha: 0.25)),
+          border: Border.all(color: color.withValues(alpha: 0.25)),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -809,8 +818,8 @@ class _ExerciseTile extends StatelessWidget {
             Text(
               label,
               style: TextStyle(
-                color:      color,
-                fontSize:   11,
+                color: color,
+                fontSize: 11,
                 fontWeight: FontWeight.w600,
               ),
             ),

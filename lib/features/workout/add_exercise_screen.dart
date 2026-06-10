@@ -57,7 +57,7 @@ import '../../data/models/workout_exercise_model.dart';
 // ── File-level color constants ────────────────────────────────
 // These dark-navy tones are shared with create_workout_screen.
 // TODO: move into AppColors once palette is finalised.
-const Color _kCardBg   = Color(0xFF0D3358); // section / card background
+const Color _kCardBg = Color(0xFF0D3358); // section / card background
 const Color _kDarkFill = Color(0xFF082035); // input field fill
 
 // ─────────────────────────────────────────────────────────────
@@ -142,14 +142,14 @@ class _AddExerciseScreenState extends State<AddExerciseScreen> {
   late final TextEditingController _weightCtrl;
 
   // ── Dropdown / stepper / chip state ───────────────────────
-  String? _selectedCategory;   // null = "Select Category" (unselected)
-  int _sets        = 3;
-  int _reps        = 10;
+  String? _selectedCategory; // null = "Select Category" (unselected)
+  int _sets = 3;
+  int _reps = 10;
   int _restSeconds = 60;
-  bool _isKg       = true;     // KG/LBS toggle
+  bool _isKg = true; // KG/LBS toggle
 
   // ── UUID ──────────────────────────────────────────────────
-  final _uuid = const Uuid();
+  final _uuid = Uuid();
 
   // ── Computed helpers ──────────────────────────────────────
   bool get _isEditMode => widget.existingResult != null;
@@ -160,7 +160,7 @@ class _AddExerciseScreenState extends State<AddExerciseScreen> {
     super.initState();
     final ex = widget.existingResult;
 
-    _nameCtrl   = TextEditingController(text: ex?.displayName ?? '');
+    _nameCtrl = TextEditingController(text: ex?.displayName ?? '');
 
     // Pre-fill weight — convert from kg to lbs if toggled later.
     _weightCtrl = TextEditingController(
@@ -170,8 +170,8 @@ class _AddExerciseScreenState extends State<AddExerciseScreen> {
     );
 
     if (ex != null) {
-      _sets        = ex.model.sets;
-      _reps        = ex.model.reps;
+      _sets = ex.model.sets;
+      _reps = ex.model.reps;
       _restSeconds = ex.model.restSeconds;
 
       // Match stored muscle group to a category in the dropdown list.
@@ -221,34 +221,32 @@ class _AddExerciseScreenState extends State<AddExerciseScreen> {
     final now = DateTime.now();
 
     final model = WorkoutExerciseModel(
-      id:          _isEditMode
-                     ? widget.existingResult!.model.id
-                     : _uuid.v4(),
-      workoutId:   widget.workoutId,
+      id: _isEditMode ? widget.existingResult!.model.id : _uuid.v4(),
+      workoutId: widget.workoutId,
       // exerciseId:
       //   EDIT   → keep existing (may be a real DB id or a custom_ uuid)
       //   ADD    → 'custom_<uuid>' — replaced when ExerciseSearchScreen
       //            returns a real ExerciseModel with a DB exerciseId
-      exerciseId:  _isEditMode
-                     ? widget.existingResult!.model.exerciseId
-                     : 'custom_${_uuid.v4()}',
-      sets:        _sets,
-      reps:        _reps,
-      weight:      weightKg,
+      exerciseId: _isEditMode
+          ? widget.existingResult!.model.exerciseId
+          : 'custom_${_uuid.v4()}',
+      sets: _sets,
+      reps: _reps,
+      weight: weightKg,
       restSeconds: _restSeconds,
-      orderIndex:  _isEditMode
-                     ? widget.existingResult!.model.orderIndex
-                     : 0, // create_workout_screen re-indexes before saving
-      updatedAt:   now,
-      isSynced:    false,
+      orderIndex: _isEditMode
+          ? widget.existingResult!.model.orderIndex
+          : 0, // create_workout_screen re-indexes before saving
+      updatedAt: now,
+      isSynced: false,
     );
 
     Navigator.pop(
       context,
       AddExerciseResult(
-        model:        model,
-        displayName:  _nameCtrl.text.trim(),
-        muscleGroup:  _selectedCategory ?? '',
+        model: model,
+        displayName: _nameCtrl.text.trim(),
+        muscleGroup: _selectedCategory ?? '',
       ),
     );
   }
@@ -266,7 +264,6 @@ class _AddExerciseScreenState extends State<AddExerciseScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-
               // ── Exercise name ────────────────────────────
               _fieldLabel('Exercise Name *'),
               const SizedBox(height: 6),
@@ -379,22 +376,18 @@ class _AddExerciseScreenState extends State<AddExerciseScreen> {
         color: Colors.white.withValues(alpha: 0.55),
         fontSize: 13,
       ),
-      contentPadding:
-          const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide:
-            BorderSide(color: Colors.white.withValues(alpha: 0.12)),
+        borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.12)),
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide:
-            BorderSide(color: Colors.white.withValues(alpha: 0.12)),
+        borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.12)),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide:
-            BorderSide(color: AppColors.steelColor, width: 1.5),
+        borderSide: BorderSide(color: AppColors.steelColor, width: 1.5),
       ),
       errorBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
@@ -402,8 +395,7 @@ class _AddExerciseScreenState extends State<AddExerciseScreen> {
       ),
       focusedErrorBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide:
-            BorderSide(color: AppColors.error, width: 1.5),
+        borderSide: BorderSide(color: AppColors.error, width: 1.5),
       ),
       errorStyle: TextStyle(color: AppColors.error, fontSize: 12),
     );
@@ -434,8 +426,7 @@ class _AddExerciseScreenState extends State<AddExerciseScreen> {
       value: _selectedCategory,
       dropdownColor: _kCardBg,
       style: const TextStyle(color: Colors.white, fontSize: 14),
-      icon: const Icon(
-          Icons.keyboard_arrow_down, color: Colors.white54),
+      icon: const Icon(Icons.keyboard_arrow_down, color: Colors.white54),
       hint: Text(
         AppStrings.selectCategory,
         style: TextStyle(
@@ -445,10 +436,7 @@ class _AddExerciseScreenState extends State<AddExerciseScreen> {
       ),
       decoration: _inputDecoration(''),
       items: _kMuscleCategories
-          .map((cat) => DropdownMenuItem(
-                value: cat,
-                child: Text(cat),
-              ))
+          .map((cat) => DropdownMenuItem(value: cat, child: Text(cat)))
           .toList(),
       onChanged: (v) => setState(() => _selectedCategory = v),
     );
@@ -463,8 +451,7 @@ class _AddExerciseScreenState extends State<AddExerciseScreen> {
           child: TextFormField(
             controller: _weightCtrl,
             style: const TextStyle(color: Colors.white, fontSize: 14),
-            keyboardType:
-                const TextInputType.numberWithOptions(decimal: true),
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
             inputFormatters: [
               // Allow digits and a single dot only.
               FilteringTextInputFormatter.allow(RegExp(r'[\d.]')),
@@ -482,8 +469,7 @@ class _AddExerciseScreenState extends State<AddExerciseScreen> {
           decoration: BoxDecoration(
             color: _kDarkFill,
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-                color: Colors.white.withValues(alpha: 0.12)),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
           ),
           child: Row(
             children: [
@@ -507,18 +493,14 @@ class _AddExerciseScreenState extends State<AddExerciseScreen> {
   }
 
   // Unit toggle button pill (KG / LBS).
-  Widget _unitToggleBtn(
-      String label, bool active, VoidCallback onTap) {
+  Widget _unitToggleBtn(String label, bool active, VoidCallback onTap) {
     return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 160),
-        padding: const EdgeInsets.symmetric(
-            horizontal: 16, vertical: 13),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
         decoration: BoxDecoration(
-          color: active
-              ? AppColors.steelColor
-              : Colors.transparent,
+          color: active ? AppColors.steelColor : Colors.transparent,
           borderRadius: BorderRadius.circular(11),
         ),
         child: Text(
@@ -526,9 +508,7 @@ class _AddExerciseScreenState extends State<AddExerciseScreen> {
           style: TextStyle(
             color: active ? Colors.white : Colors.white54,
             fontSize: 13,
-            fontWeight: active
-                ? FontWeight.w600
-                : FontWeight.normal,
+            fontWeight: active ? FontWeight.w600 : FontWeight.normal,
           ),
         ),
       ),
@@ -540,8 +520,9 @@ class _AddExerciseScreenState extends State<AddExerciseScreen> {
     final raw = double.tryParse(_weightCtrl.text.trim());
     if (raw == null) return;
     final converted = toKg
-        ? raw * 0.453592  // lbs → kg
-        : raw * 2.20462;  // kg → lbs
+        ? raw *
+              0.453592 // lbs → kg
+        : raw * 2.20462; // kg → lbs
     _weightCtrl.text = converted.toStringAsFixed(1);
   }
 
@@ -554,8 +535,7 @@ class _AddExerciseScreenState extends State<AddExerciseScreen> {
         return GestureDetector(
           onTap: () => setState(() => _restSeconds = sec),
           child: Container(
-            padding: const EdgeInsets.symmetric(
-                horizontal: 20, vertical: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
             decoration: BoxDecoration(
               color: selected
                   ? AppColors.steelColor
@@ -570,12 +550,8 @@ class _AddExerciseScreenState extends State<AddExerciseScreen> {
             child: Text(
               '${sec}s',
               style: TextStyle(
-                color: selected
-                    ? Colors.white
-                    : Colors.white54,
-                fontWeight: selected
-                    ? FontWeight.w600
-                    : FontWeight.normal,
+                color: selected ? Colors.white : Colors.white54,
+                fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
                 fontSize: 14,
               ),
             ),
@@ -644,13 +620,11 @@ class _StepperWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding:
-          const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
       decoration: BoxDecoration(
         color: _kDarkFill,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-            color: Colors.white.withValues(alpha: 0.12)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
       ),
       child: Column(
         children: [
@@ -658,8 +632,7 @@ class _StepperWidget extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.directions_run,
-                  color: AppColors.steelColor, size: 14),
+              Icon(Icons.directions_run, color: AppColors.steelColor, size: 14),
               const SizedBox(width: 4),
               Text(
                 label,
@@ -677,8 +650,7 @@ class _StepperWidget extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              _btn(Icons.remove, value > min,
-                  () => onChanged(value - 1)),
+              _btn(Icons.remove, value > min, () => onChanged(value - 1)),
               Text(
                 '$value',
                 style: const TextStyle(
@@ -687,8 +659,7 @@ class _StepperWidget extends StatelessWidget {
                   fontWeight: FontWeight.bold,
                 ),
               ),
-              _btn(Icons.add, value < max,
-                  () => onChanged(value + 1)),
+              _btn(Icons.add, value < max, () => onChanged(value + 1)),
             ],
           ),
         ],
@@ -696,8 +667,7 @@ class _StepperWidget extends StatelessWidget {
     );
   }
 
-  Widget _btn(
-      IconData icon, bool enabled, VoidCallback onTap) {
+  Widget _btn(IconData icon, bool enabled, VoidCallback onTap) {
     return GestureDetector(
       onTap: enabled ? onTap : null,
       child: Container(
@@ -712,9 +682,7 @@ class _StepperWidget extends StatelessWidget {
         child: Icon(
           icon,
           size: 16,
-          color: enabled
-              ? AppColors.steelColor
-              : Colors.white24,
+          color: enabled ? AppColors.steelColor : Colors.white24,
         ),
       ),
     );

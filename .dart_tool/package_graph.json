@@ -14,7 +14,8 @@
         "flutter",
         "flutter_bloc",
         "path",
-        "sqflite"
+        "sqflite",
+        "uuid"
       ],
       "devDependencies": [
         "flutter_lints",
@@ -111,6 +112,14 @@
       "name": "cupertino_icons",
       "version": "1.0.9",
       "dependencies": []
+    },
+    {
+      "name": "uuid",
+      "version": "4.5.3",
+      "dependencies": [
+        "crypto",
+        "fixnum"
+      ]
     },
     {
       "name": "flutter",
@@ -339,6 +348,18 @@
       ]
     },
     {
+      "name": "fixnum",
+      "version": "1.1.1",
+      "dependencies": []
+    },
+    {
+      "name": "crypto",
+      "version": "3.0.7",
+      "dependencies": [
+        "typed_data"
+      ]
+    },
+    {
       "name": "sky_engine",
       "version": "0.0.0",
       "dependencies": []
@@ -470,16 +491,16 @@
       ]
     },
     {
-      "name": "vm_service",
-      "version": "15.1.0",
-      "dependencies": []
-    },
-    {
       "name": "typed_data",
       "version": "1.4.0",
       "dependencies": [
         "collection"
       ]
+    },
+    {
+      "name": "vm_service",
+      "version": "15.1.0",
+      "dependencies": []
     }
   ],
   "configVersion": 1

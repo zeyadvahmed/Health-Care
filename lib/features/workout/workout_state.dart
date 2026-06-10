@@ -2,76 +2,112 @@
 // workout_state.dart
 // lib/features/workout/workout_state.dart
 //
-// PURPOSE:
-//   Defines every possible state the WorkoutCubit can be in.
-//   The cubit emits one of these states and BlocBuilder
-//   rebuilds the UI whenever a new state arrives.
+// All states emitted by WorkoutController (Cubit).
 //
-// HOW STATES WORK IN THIS APP:
-//   WorkoutInitial     → app just started, nothing loaded yet
-//   WorkoutLoading     → async operation in progress
-//   WorkoutLoaded      → workouts fetched, ready to display
-//   WorkoutSearching   → exercise search results updated
-//   WorkoutSessionActive → a session is currently running
-//   WorkoutError       → something went wrong, show message
+// STATE USAGE MAP — which screen reacts to which state:
 //
-// RULE:
-//   Every state holds ALL the data the UI needs to render.
-//   Screens never store data locally — they read it from state.
+//   WorkoutInitial
+//     → WorkoutsListScreen builder: shows loading spinner
+//
+//   WorkoutLoading
+//     → WorkoutsListScreen builder:  shows loading spinner
+//     → CreateWorkoutScreen builder: shows saving overlay
+//     → WorkoutOverviewScreen builder: shows busy overlay
+//     → ActiveSessionScreen builder: shows finishing overlay
+//     → ExerciseSearchScreen builder: shows spinner
+//
+//   WorkoutLoaded
+//     → WorkoutsListScreen builder:       renders workout lists
+//     → CreateWorkoutScreen listener:     pops screen (save done)
+//     → WorkoutOverviewScreen listener:   (not used directly)
+//     → ActiveSessionScreen listener:     navigates to Summary
+//       — only when activeSession != null (finishSession path)
+//
+//   WorkoutSearchResults
+//     → ExerciseSearchScreen builder: renders exercise list
+//
+//   WorkoutSessionActive
+//     → WorkoutOverviewScreen listener: navigates to ActiveSession
+//
+//   WorkoutError
+//     → All screens listener: shows error snackbar
 // ============================================================
 
 import '../../data/models/workout_model.dart';
-import '../../data/models/workout_session_model.dart';
 import '../../data/models/exercise_model.dart';
+import '../../data/models/workout_session_model.dart';
 
-// Base class — every state extends this
+// ── Base class ─────────────────────────────────────────────
 abstract class WorkoutState {}
 
-// ── Initial ────────────────────────────────────────────────
-// Emitted once when the cubit is first created.
-// workout_list_screen shows nothing until LoadWorkouts is called.
+// ── WorkoutInitial ─────────────────────────────────────────
+// Emitted by WorkoutController() constructor.
+// WorkoutsListScreen shows a spinner until loadWorkouts() fires.
 class WorkoutInitial extends WorkoutState {}
 
-// ── Loading ────────────────────────────────────────────────
-// Emitted at the START of any async operation.
-// Screens show LoadingWidget when this state is active.
+// ── WorkoutLoading ─────────────────────────────────────────
+// Emitted at the start of every async operation:
+//   loadWorkouts, saveWorkout, deleteWorkout, finishSession.
+// Screens show a loading indicator while this is active.
 class WorkoutLoading extends WorkoutState {}
 
-// ── Loaded ─────────────────────────────────────────────────
-// Emitted after workouts are successfully fetched from SQLite.
-// workout_list_screen builds its list from this state.
+// ── WorkoutLoaded ──────────────────────────────────────────
+// Emitted after any successful write or load completes.
+//
+// workouts
+//   Always present. Full list of predefined + user workouts.
+//   Used by WorkoutsListScreen to rebuild the two lists.
+//
+// activeSession
+//   Non-null ONLY after finishSession() completes.
+//   ActiveSessionScreen listener checks activeSession != null
+//   before navigating to WorkoutSummaryScreen.
+//   Null in all other WorkoutLoaded emissions.
 class WorkoutLoaded extends WorkoutState {
   final List<WorkoutModel> workouts;
   final WorkoutSessionModel? activeSession;
 
-  WorkoutLoaded({
-    required this.workouts,
-    this.activeSession,
-  });
+  WorkoutLoaded({required this.workouts, this.activeSession});
 }
 
-// ── Search Results ─────────────────────────────────────────
-// Emitted every time searchExercises() or loadAllExercises()
-// completes. exercise_search_screen rebuilds its list.
+// ── WorkoutSearchResults ───────────────────────────────────
+// Emitted by searchExercises() and loadAllExercises().
+// ExerciseSearchScreen rebuilds its list on every emission.
+//
+// results
+//   Matched exercises. Empty list when:
+//     - query is blank (loadAllExercises failed silently)
+//     - search returned no matches
+//     - SQLite threw an error (silent fallback to [])
 class WorkoutSearchResults extends WorkoutState {
   final List<ExerciseModel> results;
 
   WorkoutSearchResults({required this.results});
 }
 
-// ── Session Active ─────────────────────────────────────────
-// Emitted when a session starts and when sets are logged.
-// active_session_screen reads activeSession from this state.
+// ── WorkoutSessionActive ───────────────────────────────────
+// Emitted by startSession() after the session row is inserted
+// into SQLite with endTime = null (session is live).
+//
+// WorkoutOverviewScreen listener catches this and navigates
+// to ActiveSessionScreen, passing activeSession as a param.
+//
+// activeSession
+//   The newly created session with startTime set and
+//   endTime = null. Passed to ActiveSessionScreen.
 class WorkoutSessionActive extends WorkoutState {
   final WorkoutSessionModel activeSession;
 
   WorkoutSessionActive({required this.activeSession});
 }
 
-// ── Error ──────────────────────────────────────────────────
-// Emitted when any operation fails.
-// Screens show an error snackbar when this state arrives.
-// message is shown to the user — keep it human-readable.
+// ── WorkoutError ───────────────────────────────────────────
+// Emitted when any operation fails inside a try/catch.
+// Every screen's BlocListener shows a snackbar with message.
+//
+// message
+//   Human-readable string shown in the error snackbar.
+//   Never expose raw exception text to the user.
 class WorkoutError extends WorkoutState {
   final String message;
 
