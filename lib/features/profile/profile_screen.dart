@@ -39,16 +39,9 @@ class _ProfileScreenState
 
 Future<void> loadUser() async {
 
-  final users = await dbHelper.getUsers();
+  try {
 
-  if (users.isNotEmpty) {
-
-    data = users.first;
-
-  } else {
-
-    final user =
-        FirebaseAuth.instance.currentUser;
+    final user = FirebaseAuth.instance.currentUser;
 
     final firestoreData =
         await FirebaseFirestore.instance
@@ -56,32 +49,65 @@ Future<void> loadUser() async {
             .doc(user!.uid)
             .get();
 
-    data = firestoreData.data();
+    if (!firestoreData.exists || firestoreData.data() == null) {
 
-    data!['age'] ??= '21';
-    data!['weight'] ??= '55';
-    data!['height'] ??= '160';
-    data!['waterGoal'] ??= '2.5';
-    data!['caloriesGoal'] ??= '2400';
+      final localUsers = await dbHelper.getUsers();
 
-    await dbHelper.insertUserIfNotExists({
+      if (localUsers.isNotEmpty) {
+        data = localUsers.first;
+      } else {
+        data = {
+          'name': '',
+          'email': user.email ?? '',
+          'age': 21,
+          'weight': 55.0,
+          'height': 160.0,
+          'waterGoal': 2.5,
+          'caloriesGoal': 2400,
+        };
+        await dbHelper.insertUserIfNotExists(data!);
+      }
 
-      'name': data!['name'],
+    } else {
 
-      'email': data!['email'],
+      data = firestoreData.data()!;
 
-      'age': data!['age'],
+      data!['age'] ??= 21;
+      data!['weight'] ??= 55.0;
+      data!['height'] ??= 160.0;
+      data!['waterGoal'] ??= 2.5;
+      data!['caloriesGoal'] ??= 2400;
 
-      'weight': data!['weight'],
+      await dbHelper.insertUserIfNotExists({
+        'name': data!['name'],
+        'email': data!['email'],
+        'age': data!['age'],
+        'weight': data!['weight'],
+        'height': data!['height'],
+        'waterGoal': data!['waterGoal'],
+        'caloriesGoal': data!['caloriesGoal'],
+      });
+    }
 
-      'height': data!['height'],
-
-      'waterGoal': data!['waterGoal'],
-
-      'caloriesGoal': data!['caloriesGoal'],
-    });
+  } catch (e) {
+    debugPrint('loadUser error: $e');
+    final localUsers = await dbHelper.getUsers();
+    if (localUsers.isNotEmpty) {
+      data = localUsers.first;
+    } else {
+      data = {
+        'name': '',
+        'email': FirebaseAuth.instance.currentUser?.email ?? '',
+        'age': 21,
+        'weight': 55.0,
+        'height': 160.0,
+        'waterGoal': 2.5,
+        'caloriesGoal': 2400,
+      };
+    }
   }
 
+  if (!mounted) return;
   setState(() {});
 }
 
@@ -169,63 +195,26 @@ Future<void> loadUser() async {
 
                   right: 0,
 
-                  child: Center(
+                  child: const Center(
 
-                    child: Stack(
+                    child: CircleAvatar(
 
-                      children: [
+                      radius: 70,
 
-                        const CircleAvatar(
+                      backgroundColor: Colors.white,
 
-                          radius: 70,
+                      child: CircleAvatar(
 
-                          backgroundColor:
-                              Colors.white,
+                        radius: 64,
 
-                          child: CircleAvatar(
+                        backgroundColor: Color(0xFFD9CDEB),
 
-                            radius: 64,
-
-                            backgroundColor:
-                                Color(
-                              0xFFD9CDEB,
-                            ),
-                          ),
+                        child: Icon(
+                          Icons.person,
+                          size: 70,
+                          color: Colors.white,
                         ),
-
-                        Positioned(
-
-                          bottom: 6,
-
-                          right: 6,
-
-                          child: Container(
-
-                            padding:
-                                const EdgeInsets.all(
-                              8,
-                            ),
-
-                            decoration:
-                                const BoxDecoration(
-
-                              color:
-                                  Colors.white,
-
-                              shape:
-                                  BoxShape.circle,
-                            ),
-
-                            child: const Icon(
-
-                              Icons.edit,
-
-                              color:
-                                  Colors.blue,
-                            ),
-                          ),
-                        ),
-                      ],
+                      ),
                     ),
                   ),
                 ),
@@ -238,7 +227,7 @@ Future<void> loadUser() async {
 
             Text(
 
-              data!['name']?? '',
+              data!['name'] ?? '',
 
               style:
                   const TextStyle(
@@ -256,7 +245,7 @@ Future<void> loadUser() async {
 
             Text(
 
-              data!['email'],
+              data!['email'] ?? '',
 
               style:
                   const TextStyle(
@@ -438,27 +427,27 @@ onTap: () async {
 
     final ageController =
         TextEditingController(
-      text: data!['age'],
+      text: data!['age'].toString(),
     );
 
     final weightController =
         TextEditingController(
-      text: data!['weight'],
+      text: data!['weight'].toString(),
     );
 
     final heightController =
         TextEditingController(
-      text: data!['height'],
+      text: data!['height'].toString(),
     );
 
     final waterController =
         TextEditingController(
-      text: data!['waterGoal'],
+      text: data!['waterGoal'].toString(),
     );
 
     final caloriesController =
         TextEditingController(
-      text: data!['caloriesGoal'],
+      text: data!['caloriesGoal'].toString(),
     );
 
     showDialog(
@@ -466,6 +455,11 @@ onTap: () async {
       context: context,
 
       builder: (_) {
+
+        bool isSaving = false;
+
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
 
         return AlertDialog(
 
@@ -492,6 +486,7 @@ const SizedBox(height: 10),
 
 TextField(
   controller: emailController,
+  readOnly: true,
   decoration: const InputDecoration(
     labelText: 'Email',
   ),
@@ -500,28 +495,43 @@ TextField(
 const SizedBox(height: 10),
 
                 TextField(
-                  controller:
-                      ageController,
+                  controller: ageController,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                    labelText: 'Age',
+                  ),
                 ),
 
                 TextField(
-                  controller:
-                      weightController,
+                  controller: weightController,
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  decoration: const InputDecoration(
+                    labelText: 'Weight',
+                  ),
                 ),
 
                 TextField(
-                  controller:
-                      heightController,
+                  controller: heightController,
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  decoration: const InputDecoration(
+                    labelText: 'Height',
+                  ),
                 ),
 
                 TextField(
-                  controller:
-                      waterController,
+                  controller: waterController,
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  decoration: const InputDecoration(
+                    labelText: 'Water Goal',
+                  ),
                 ),
 
                 TextField(
-                  controller:
-                      caloriesController,
+                  controller: caloriesController,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                    labelText: 'Calories Goal',
+                  ),
                 ),
               ],
             ),
@@ -529,73 +539,132 @@ const SizedBox(height: 10),
 
           actions: [
 
+            TextButton(
+              onPressed: isSaving ? null : () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+
             ElevatedButton(
 
-              onPressed: () async {
+              onPressed: isSaving ? null : () async {
 
-                final users =
-                    await dbHelper
-                        .getUsers();
+                if (nameController.text.trim().isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Name is required')),
+                  );
+                  return;
+                }
 
-                final userId =
-                    users.first['id'];
+                if (int.tryParse(ageController.text) == null) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Age must be a valid number')),
+                  );
+                  return;
+                }
 
-                await dbHelper
-                    .updateUser({
+                if (double.tryParse(weightController.text) == null) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Weight must be a valid number')),
+                  );
+                  return;
+                }
 
-                  'name':
-                      nameController.text,
+                if (double.tryParse(heightController.text) == null) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Height must be a valid number')),
+                  );
+                  return;
+                }
 
-                  'email': 
-                      emailController.text,
+                if (double.tryParse(waterController.text) == null) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Water Goal must be a valid number')),
+                  );
+                  return;
+                }
 
-                  'age':
-                      ageController.text,
+                if (int.tryParse(caloriesController.text) == null) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Calories Goal must be a valid number')),
+                  );
+                  return;
+                }
 
-                  'weight':
-                      weightController.text,
+                try {
+                  setDialogState(() => isSaving = true);
 
-                  'height':
-                      heightController.text,
+                  final users = await dbHelper.getUsers();
 
-                  'waterGoal':
-                      waterController.text,
+                  if (users.isNotEmpty) {
+                    final userId = users.first['id'];
+                    await dbHelper.updateUser({
+                      'name': nameController.text,
+                      'email': data!['email'],
+                      'age': int.parse(ageController.text),
+                      'weight': double.parse(weightController.text),
+                      'height': double.parse(heightController.text),
+                      'waterGoal': double.parse(waterController.text),
+                      'caloriesGoal': int.parse(caloriesController.text),
+                    }, userId);
+                  } else {
+                    await dbHelper.insertUserIfNotExists({
+                      'name': nameController.text,
+                      'email': data!['email'],
+                      'age': int.parse(ageController.text),
+                      'weight': double.parse(weightController.text),
+                      'height': double.parse(heightController.text),
+                      'waterGoal': double.parse(waterController.text),
+                      'caloriesGoal': int.parse(caloriesController.text),
+                    });
+                  }
 
-                  'caloriesGoal':
-                      caloriesController.text,
+                  // Sync to Firestore
+                  final user = FirebaseAuth.instance.currentUser;
+                  await FirebaseFirestore.instance
+                      .collection('User')
+                      .doc(user!.uid)
+                      .set({
+                    'name': nameController.text,
+                    'age': int.parse(ageController.text),
+                    'weight': double.parse(weightController.text),
+                    'height': double.parse(heightController.text),
+                    'waterGoal': double.parse(waterController.text),
+                    'caloriesGoal': int.parse(caloriesController.text),
+                  }, SetOptions(merge: true));
 
-                }, userId);
+                  setState(() {
+                    data!['name'] = nameController.text;
+                    data!['age'] = int.parse(ageController.text);
+                    data!['weight'] = double.parse(weightController.text);
+                    data!['height'] = double.parse(heightController.text);
+                    data!['waterGoal'] = double.parse(waterController.text);
+                    data!['caloriesGoal'] = int.parse(caloriesController.text);
+                  });
 
-                setState(() {
-                  data!['name'] = 
-                     nameController.text;
-                  data!['email'] = 
-                     emailController.text;
-                  data!['age'] =
-                     ageController.text;
-                  data!['weight'] = weightController.text;
-                      weightController.text;
+                  if (mounted) Navigator.pop(context);
 
-                  data!['height'] =
-                      heightController.text;
-
-                  data!['waterGoal'] =
-                      waterController.text;
-
-                  data!['caloriesGoal'] =
-                      caloriesController.text;
-                });
-
-               if (mounted) {
-                Navigator.pop(context);
+                } catch (e) {
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Error saving: ${e.toString()}')),
+                    );
+                  }
+                } finally {
+                  if (mounted) setDialogState(() => isSaving = false);
                 }
               },
 
-              child: const Text(
-                'Save',
-              ),
+              child: isSaving
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Text('Save'),
             ),
           ],
+        );
+          },
         );
       },
     );
@@ -603,10 +672,10 @@ const SizedBox(height: 10),
 
   Widget sectionTitleGoals() {
 
-    return const Padding(
+    return Padding(
 
       padding:
-          EdgeInsets.symmetric(
+          const EdgeInsets.symmetric(
         horizontal: 24,
       ),
 
@@ -617,7 +686,7 @@ const SizedBox(height: 10),
 
         children: [
 
-          Text(
+          const Text(
 
             'Daily Goals',
 
@@ -630,19 +699,24 @@ const SizedBox(height: 10),
             ),
           ),
 
-          Text(
+          InkWell(
 
-            'Edit',
+            onTap: () => editDialog(),
 
-            style: TextStyle(
+            child: const Text(
 
-              color:
-                  Colors.blue,
+              'Edit',
 
-              fontWeight:
-                  FontWeight.bold,
+              style: TextStyle(
 
-              fontSize: 18,
+                color:
+                    Colors.blue,
+
+                fontWeight:
+                    FontWeight.bold,
+
+                fontSize: 18,
+              ),
             ),
           ),
         ],
@@ -689,21 +763,21 @@ const SizedBox(height: 10),
 
             DetailItem(
               'Age',
-              '${data!['age']} yrs',
+              '${int.tryParse(data!['age'].toString()) ?? 0} yrs',
             ),
 
             const VerticalDivider(),
 
             DetailItem(
               'Weight',
-              '${data!['weight']} kg',
+              '${(double.tryParse(data!['weight'].toString()) ?? 0).toStringAsFixed(1)} kg',
             ),
 
             const VerticalDivider(),
 
             DetailItem(
               'Height',
-              '${data!['height']} cm',
+              '${(double.tryParse(data!['height'].toString()) ?? 0).toStringAsFixed(1)} cm',
             ),
           ],
         ),
@@ -750,14 +824,14 @@ const SizedBox(height: 10),
 
             DetailItem(
               'Calories Goal',
-              '${data!['caloriesGoal']} kcal',
+              '${int.tryParse(data!['caloriesGoal'].toString()) ?? 0} kcal',
             ),
 
             const VerticalDivider(),
 
             DetailItem(
               'Water Goal',
-              '${data!['waterGoal']} L',
+              '${(double.tryParse(data!['waterGoal'].toString()) ?? 0).toStringAsFixed(1)} L',
             ),
           ],
         ),
