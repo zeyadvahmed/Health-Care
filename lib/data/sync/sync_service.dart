@@ -42,10 +42,8 @@
 import '../local/local_exercise_service.dart';
 import '../local/local_workout_service.dart';
 import '../local/local_session_service.dart';
-import '../local/local_activity_service.dart';
 import '../remote/remote_exercise_service.dart';
 import '../remote/remote_workout_service.dart';
-import '../remote/remote_activity_service.dart';
 import 'connectivity_service.dart';
 
 class SyncService {

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../main_nav_screen.dart';
 
 import '../../data/services/auth_service.dart';
+import '../../data/database/database_helper.dart';
 
 import '../../shared/widgets/custom_snackbar.dart';
 
@@ -487,40 +488,46 @@ class RegisterScreen
           try {
 
             await authService.register(
-
-              name:
+              name: 
                   nameController.text
-                      .trim(),
-
-              email:
+                          .trim(),
+              email: 
                   emailController.text
-                      .trim(),
+                           .trim(),
+                  password:
+                      passwordController.text.trim(),
+  );
 
-              password:
-                  passwordController.text
-                      .trim(),
-            );
+  final dbHelper = DatabaseHelper();
+
+  await dbHelper.insertUserIfNotExists({
+    'name': nameController.text.trim(),
+    'email': emailController.text.trim(),
+    'age': '21',
+    'weight': '55',
+    'height': '160',
+    'waterGoal': '2.5',
+    'caloriesGoal': '2400',
+  });
+
+  if (!context.mounted) return;
 
             Navigator.pushReplacement(
-
-              context,
-
-              MaterialPageRoute(
-
-                builder: (_) =>
-                    const MainNavScreen(),
-              ),
-            );
+    context,
+    MaterialPageRoute(
+      builder: (_) => const MainNavScreen(),
+    ),
+  );
 
           } catch (e) {
 
+  if (!context.mounted) return;
+
             CustomSnackbar.show(
-
-              context,
-
-              e.toString(),
-            );
-          }
+                context,
+                e.toString(),
+         );
+        }
         },
 
         child: const Text(

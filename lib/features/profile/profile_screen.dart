@@ -37,60 +37,53 @@ class _ProfileScreenState
     loadUser();
   }
 
-  Future<void> loadUser() async {
+Future<void> loadUser() async {
+
+  final users = await dbHelper.getUsers();
+
+  if (users.isNotEmpty) {
+
+    data = users.first;
+
+  } else {
 
     final user =
         FirebaseAuth.instance.currentUser;
 
     final firestoreData =
         await FirebaseFirestore.instance
-
             .collection('User')
-
             .doc(user!.uid)
-
             .get();
 
-    data =
-        firestoreData.data();
+    data = firestoreData.data();
 
     data!['age'] ??= '21';
-
     data!['weight'] ??= '55';
-
     data!['height'] ??= '160';
-
     data!['waterGoal'] ??= '2.5';
-
     data!['caloriesGoal'] ??= '2400';
 
-    await dbHelper
-        .insertUserIfNotExists({
+    await dbHelper.insertUserIfNotExists({
 
-      'name':
-          data!['name'],
+      'name': data!['name'],
 
-      'email':
-          data!['email'],
+      'email': data!['email'],
 
-      'age':
-          data!['age'],
+      'age': data!['age'],
 
-      'weight':
-          data!['weight'],
+      'weight': data!['weight'],
 
-      'height':
-          data!['height'],
+      'height': data!['height'],
 
-      'waterGoal':
-          data!['waterGoal'],
+      'waterGoal': data!['waterGoal'],
 
-      'caloriesGoal':
-          data!['caloriesGoal'],
+      'caloriesGoal': data!['caloriesGoal'],
     });
-
-    setState(() {});
   }
+
+  setState(() {});
+}
 
   @override
   Widget build(BuildContext context) {
@@ -245,7 +238,7 @@ class _ProfileScreenState
 
             Text(
 
-              data!['name'],
+              data!['name']?? '',
 
               style:
                   const TextStyle(
@@ -310,90 +303,59 @@ class _ProfileScreenState
                 horizontal: 24,
               ),
 
-              child: InkWell(
+            child: InkWell(
 
-                onTap: () async {
+onTap: () async {
 
-                  await authService
-                      .logout();
+  final navigator = Navigator.of(context);
 
-                  Navigator.pushAndRemoveUntil(
+  await authService.logout();
 
-                    context,
+  navigator.pushAndRemoveUntil(
+    MaterialPageRoute(
+      builder: (_) => LoginScreen(),
+    ),
+    (route) => false,
+  );
+},
 
-                    MaterialPageRoute(
+  child: Container(
 
-                      builder: (_) =>
-                          LoginScreen(),
-                    ),
+    width: double.infinity,
 
-                    (route) => false,
-                  );
-                },
+    padding: const EdgeInsets.symmetric(
+      vertical: 20,
+    ),
 
-                child: Container(
+    decoration: BoxDecoration(
+      color: const Color(0xFFFFEEEE),
+      borderRadius: BorderRadius.circular(24),
+    ),
 
-                  width:
-                      double.infinity,
+    child: const Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Icon(
+          Icons.logout,
+          color: Colors.red,
+        ),
+        SizedBox(width: 10),
+        Text(
+          'Logout',
+          style: TextStyle(
+            color: Colors.red,
+            fontSize: 28,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ],
+    ),
+  ),
+),
 
-                  padding:
-                      const EdgeInsets.symmetric(
-                    vertical: 20,
-                  ),
 
-                  decoration:
-                      BoxDecoration(
-
-                    color:
-                        const Color(
-                      0xFFFFEEEE,
-                    ),
-
-                    borderRadius:
-                        BorderRadius.circular(
-                      24,
-                    ),
-                  ),
-
-                  child: const Row(
-
-                    mainAxisAlignment:
-                        MainAxisAlignment.center,
-
-                    children: [
-
-                      Icon(
-
-                        Icons.logout,
-
-                        color:
-                            Colors.red,
-                      ),
-
-                      SizedBox(
-                        width: 10,
-                      ),
-
-                      Text(
-
-                        'Logout',
-
-                        style: TextStyle(
-
-                          color:
-                              Colors.red,
-
-                          fontSize: 28,
-
-                          fontWeight:
-                              FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
               ),
-            ),
+          
 
             const SizedBox(
               height: 40,
@@ -464,6 +426,16 @@ class _ProfileScreenState
 
   void editDialog() {
 
+    final nameController =
+    TextEditingController(
+  text: data!['name'],
+);
+
+       final emailController =
+    TextEditingController(
+  text: data!['email'],
+);
+
     final ageController =
         TextEditingController(
       text: data!['age'],
@@ -509,7 +481,23 @@ class _ProfileScreenState
               mainAxisSize:
                   MainAxisSize.min,
 
-              children: [
+                 children: [TextField(
+            controller: nameController,
+   decoration: const InputDecoration(
+    labelText: 'Name',
+  ),
+),
+
+const SizedBox(height: 10),
+
+TextField(
+  controller: emailController,
+  decoration: const InputDecoration(
+    labelText: 'Email',
+  ),
+),
+
+const SizedBox(height: 10),
 
                 TextField(
                   controller:
@@ -556,10 +544,10 @@ class _ProfileScreenState
                     .updateUser({
 
                   'name':
-                      data!['name'],
+                      nameController.text,
 
-                  'email':
-                      data!['email'],
+                  'email': 
+                      emailController.text,
 
                   'age':
                       ageController.text,
@@ -579,11 +567,13 @@ class _ProfileScreenState
                 }, userId);
 
                 setState(() {
-
+                  data!['name'] = 
+                     nameController.text;
+                  data!['email'] = 
+                     emailController.text;
                   data!['age'] =
-                      ageController.text;
-
-                  data!['weight'] =
+                     ageController.text;
+                  data!['weight'] = weightController.text;
                       weightController.text;
 
                   data!['height'] =
@@ -596,9 +586,9 @@ class _ProfileScreenState
                       caloriesController.text;
                 });
 
-                Navigator.pop(
-                  context,
-                );
+               if (mounted) {
+                Navigator.pop(context);
+                }
               },
 
               child: const Text(
@@ -697,21 +687,21 @@ class _ProfileScreenState
 
           children: [
 
-            detailItem(
+            DetailItem(
               'Age',
               '${data!['age']} yrs',
             ),
 
-            const verticalDivider(),
+            const VerticalDivider(),
 
-            detailItem(
+            DetailItem(
               'Weight',
               '${data!['weight']} kg',
             ),
 
-            const verticalDivider(),
+            const VerticalDivider(),
 
-            detailItem(
+            DetailItem(
               'Height',
               '${data!['height']} cm',
             ),
@@ -758,14 +748,14 @@ class _ProfileScreenState
 
           children: [
 
-            detailItem(
+            DetailItem(
               'Calories Goal',
               '${data!['caloriesGoal']} kcal',
             ),
 
-            const verticalDivider(),
+            const VerticalDivider(),
 
-            detailItem(
+            DetailItem(
               'Water Goal',
               '${data!['waterGoal']} L',
             ),
@@ -776,46 +766,28 @@ class _ProfileScreenState
   }
 }
 
-class detailItem
-    extends StatelessWidget {
+class DetailItem extends StatelessWidget {
 
   final String title;
   final String value;
 
-  const detailItem(
-
+  const DetailItem(
     this.title,
     this.value, {
-
     super.key,
   });
 
   @override
   Widget build(BuildContext context) {
-
     return Column(
-
       children: [
-
+        Text(title),
+        const SizedBox(height: 10),
         Text(
-          title,
-        ),
-
-        const SizedBox(
-          height: 10,
-        ),
-
-        Text(
-
           value,
-
-          style:
-              const TextStyle(
-
+          style: const TextStyle(
             fontSize: 22,
-
-            fontWeight:
-                FontWeight.bold,
+            fontWeight: FontWeight.bold,
           ),
         ),
       ],
@@ -823,10 +795,9 @@ class detailItem
   }
 }
 
-class verticalDivider
-    extends StatelessWidget {
+class VerticalDivider extends StatelessWidget {
 
-  const verticalDivider({
+  const VerticalDivider({
     super.key,
   });
 
@@ -839,8 +810,7 @@ class verticalDivider
 
       height: 65,
 
-      color:
-          Colors.black12,
+      color: Colors.black12,
     );
   }
 }
