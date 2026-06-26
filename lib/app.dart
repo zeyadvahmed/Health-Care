@@ -6,8 +6,12 @@
 //   1. Create the MaterialApp
 //   2. Connect the global theme (AppTheme)
 //   3. Connect all named routes (AppRoutes)
-//   4. Set the starting screen (SplashScreen)
-//   5. Handle dark mode based on user preference
+//   4. Set the starting screen to SplashScreen
+//   5. Handle dark mode based on system setting
+//
+// NOTE — MultiBlocProvider:
+//   Cubits are registered in main.dart above this widget,
+//   not here. This keeps app.dart focused on MaterialApp config.
 // ============================================================
 
 import 'package:flutter/material.dart';
@@ -29,8 +33,6 @@ class SparkSteelApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
 
       // ── Light theme ────────────────────────────────────────
-      // All colors, buttons, text, inputs styled here.
-      // Team widgets pick up correct style automatically.
       theme: AppTheme.lightTheme,
 
       // ── Dark theme ─────────────────────────────────────────
@@ -44,18 +46,15 @@ class SparkSteelApp extends StatelessWidget {
 
       // ── Starting screen ────────────────────────────────────
       // SplashScreen checks Firebase auth state:
-      //   logged in  → HomeScreen
-      //   logged out → LoginScreen
-      //   checking   → splash UI
-      initialRoute: AppRoutes.mentalHealth,
+      //   logged in  → HomeScreen  (pushReplacementNamed)
+      //   logged out → LoginScreen (pushReplacementNamed)
+      //   checking   → splash UI with progress bar
+      initialRoute: AppRoutes.splash,
 
       // ── All named routes ───────────────────────────────────
-      // Every screen registered here.
-      // Use Navigator.pushNamed(context, AppRoutes.x) anywhere.
       routes: AppRoutes.routes,
 
       // ── Unknown route fallback ─────────────────────────────
-      // Shows error screen instead of crashing.
       onUnknownRoute: (settings) =>
           MaterialPageRoute(builder: (_) => const _RouteNotFoundScreen()),
     );

@@ -3,7 +3,7 @@
 // lib/data/sync/sync_service.dart
 //
 // PURPOSE:
-//   Bridge between SQLite and Firestore. Two directions:
+//   Bridge between SQLite and Firestore.
 //
 //   PUSH (syncAll):
 //     Finds all rows where isSynced=0 and pushes them up.
@@ -32,6 +32,12 @@
 //   Every feature is wrapped in its own try/catch.
 //   One failure never blocks the others from syncing.
 //
+// NOTE — _syncActivity is INTENTIONALLY OMITTED:
+//   local_activity_service.dart and remote_activity_service.dart
+//   have no implemented methods yet. Importing them causes
+//   compile errors. Uncomment the import and _syncActivity()
+//   call in syncAll() once both services are implemented.
+//
 // RULES:
 //   - Singleton pattern
 //   - Always check isOnline() before syncAll
@@ -42,10 +48,10 @@
 import '../local/local_exercise_service.dart';
 import '../local/local_workout_service.dart';
 import '../local/local_session_service.dart';
-import '../local/local_activity_service.dart';
+// import '../local/local_activity_service.dart'; // ← uncomment when implemented
 import '../remote/remote_exercise_service.dart';
 import '../remote/remote_workout_service.dart';
-import '../remote/remote_activity_service.dart';
+// import '../remote/remote_activity_service.dart'; // ← uncomment when implemented
 import 'connectivity_service.dart';
 
 class SyncService {
@@ -62,18 +68,18 @@ class SyncService {
   // ----------------------------------------------------------
   // syncAll()
   // Master push method. Finds all isSynced=0 rows across all
-  // workout/exercise/session tables and pushes them to Firestore.
+  // workout/exercise/session tables and pushes to Firestore.
   //
   // ORDER MATTERS:
-  //   workouts must exist in Firestore before workout_exercises
-  //   sessions must exist before session_logs
-  //   So push parent records before child records.
+  //   workouts must exist in Firestore before workout_exercises.
+  //   sessions must exist before session_logs.
+  //   Push parent records before child records.
   //
   // uid = Firebase Auth UID, needed for subcollection paths.
   // ----------------------------------------------------------
   Future<void> syncAll(String uid) async {
-    // Check connectivity first — abort silently if offline.
-    // Records stay isSynced=0 and will push when reconnected.
+    // Check connectivity — abort silently if offline.
+    // Records stay isSynced=0 and push when reconnected.
     final online = await ConnectivityService.instance.isOnline();
     if (!online) return;
 
@@ -110,19 +116,23 @@ class SyncService {
       print('SyncService._syncSessionLogs failed: $e');
     }
 
-    try {
-      await _syncActivity();
-    } catch (e) {
-      print('SyncService._syncActivity failed: $e');
-    }
+    // _syncActivity() is commented out — LocalActivityService and
+    // RemoteActivityService have no implemented methods yet.
+    // Restore this block once both services are implemented:
+    //
+    // try {
+    //   await _syncActivity();
+    // } catch (e) {
+    //   print('SyncService._syncActivity failed: $e');
+    // }
   }
 
   // ----------------------------------------------------------
   // _syncExercises()
   // Pushes unsynced exercises to Firestore ROOT collection.
-  // Rare in practice — exercises come FROM Firestore, not from
-  // the user. This handles the edge case where a row has
-  // isSynced=0 after seeding.
+  // Rare in practice — exercises come FROM Firestore via seeding.
+  // This handles the edge case where a row has isSynced=0
+  // after the initial seed.
   // ----------------------------------------------------------
   Future<void> _syncExercises() async {
     final unsynced = await LocalExerciseService.instance.getUnsyncedExercises();
@@ -167,8 +177,7 @@ class SyncService {
   Future<void> _syncSessions(String uid) async {
     final unsynced = await LocalSessionService.instance.getUnsyncedSessions();
     for (final session in unsynced) {
-      // Skip active sessions — only push completed ones
-      if (session.endTime == null) continue;
+      if (session.endTime == null) continue; // never push active sessions
       await RemoteWorkoutService.instance.pushSession(session, uid);
       await LocalSessionService.instance.markSessionSynced(session.id);
     }
@@ -186,6 +195,23 @@ class SyncService {
     }
   }
 
+  // ----------------------------------------------------------
+  // _syncActivity()
+  // STUB — intentionally not implemented yet.
+  // LocalActivityService and RemoteActivityService have no
+  // methods. Uncomment imports above and restore this method
+  // once both services are implemented:
+  //
+  // Future<void> _syncActivity() async {
+  //   final unsynced =
+  //       await LocalActivityService.instance.getUnsyncedActivity();
+  //   for (final activity in unsynced) {
+  //     await RemoteActivityService.instance.pushActivity(activity);
+  //     await LocalActivityService.instance.markActivitySynced(activity.id);
+  //   }
+  // }
+  // ----------------------------------------------------------
+
   // ═══════════════════════════════════════════════════════════
   // PULL — Firestore → SQLite (restore on fresh install)
   // ═══════════════════════════════════════════════════════════
@@ -194,26 +220,19 @@ class SyncService {
   // restoreFromFirestore()
   // Pulls ALL user workout data from Firestore into SQLite.
   // Called by auth_controller.login() ONLY when local data
-  // is empty — meaning this is a fresh install or the local
-  // database was cleared.
+  // is empty — meaning fresh install or cleared database.
   //
   // STRATEGY — Firestore wins:
-  //   We clear any partial local data first, then insert
-  //   everything fresh from Firestore. Simple and safe.
-  //   The alternative (merge by updatedAt) is complex and
-  //   unnecessary for this app's use case.
+  //   Insert everything fresh from Firestore.
+  //   ConflictAlgorithm.replace in insert methods handles
+  //   any partial local data safely.
   //
-  // ORDER:
-  //   1. exercises — seeded globally, not per-user
-  //   2. workouts  — parent of workout_exercises
+  // ORDER (parent tables before child tables):
+  //   1. exercises       — global, not per-user
+  //   2. workouts        — parent of workout_exercises
   //   3. workout_exercises — child of workouts
-  //   4. sessions  — completed workout records
-  //   5. session_logs — set-by-set breakdown per session
-  //
-  //   Parent tables must be restored before child tables
-  //   to maintain referential integrity.
-  //
-  // Each step is independent — one failure doesn't block others.
+  //   4. sessions        — completed workout records
+  //   5. session_logs    — set-by-set breakdown per session
   //
   // userId = app's internal user UUID (stored in users table)
   // uid    = Firebase Auth UID (used for subcollection paths)
@@ -222,15 +241,10 @@ class SyncService {
     required String userId,
     required String uid,
   }) async {
-    // Must be online to restore from Firestore
     final online = await ConnectivityService.instance.isOnline();
     if (!online) return;
 
     // ── Step 1: Exercises ─────────────────────────────────
-    // Pull all 873 exercises from the global exercises collection.
-    // These are the same for every user — seeded once globally.
-    // If already seeded, insertAllExercises uses
-    // ConflictAlgorithm.replace so duplicates are safe.
     try {
       final exercises = await RemoteExerciseService.instance
           .fetchAllExercises();
@@ -242,14 +256,11 @@ class SyncService {
     }
 
     // ── Step 2: Workouts ──────────────────────────────────
-    // Pull all workouts the user has created.
-    // Filters by userId field inside each Firestore document.
     try {
       final workouts = await RemoteWorkoutService.instance.fetchWorkoutsForUser(
         userId,
       );
       for (final workout in workouts) {
-        // Mark as synced — it just came FROM Firestore
         await LocalWorkoutService.instance.insertWorkout(
           workout.copyWith(isSynced: true),
         );
@@ -259,8 +270,6 @@ class SyncService {
     }
 
     // ── Step 3: Workout Exercises ─────────────────────────
-    // Pull all exercises linked to the user's workouts.
-    // Uses the uid subcollection path (not userId filter).
     try {
       final workoutExercises = await RemoteWorkoutService.instance
           .fetchWorkoutExercisesForUser(uid);
@@ -274,9 +283,6 @@ class SyncService {
     }
 
     // ── Step 4: Sessions ──────────────────────────────────
-    // Pull all completed workout sessions.
-    // Active sessions are never in Firestore so all fetched
-    // sessions are guaranteed to have endTime set.
     try {
       final sessions = await RemoteWorkoutService.instance.fetchSessionsForUser(
         uid,
@@ -291,9 +297,6 @@ class SyncService {
     }
 
     // ── Step 5: Session Logs ──────────────────────────────
-    // Pull all set logs for all sessions.
-    // This can be a large number of documents if the user
-    // has a long workout history — called only once.
     try {
       final logs = await RemoteWorkoutService.instance.fetchLogsForUser(uid);
       for (final log in logs) {

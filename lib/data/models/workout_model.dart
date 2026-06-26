@@ -1,8 +1,6 @@
 // ============================================================
 // workout_model.dart
-// Represents a workout template — predefined or user-created.
-// Does not hold exercises directly; exercises are linked via
-// WorkoutExerciseModel using workoutId as the foreign key.
+// Represents one workout template — predefined or user-created.
 //
 // Usage:
 //   WorkoutModel w = WorkoutModel.fromMap(map);       // from SQLite
@@ -12,11 +10,14 @@
 //   w = w.copyWith(name: 'New Name');                 // update one field
 //
 // Rules:
-//   - id is a UUID string generated at creation time
-//   - userId links this workout to the user who created it
-//   - isPredefined = true means seeded workout, false = user created
-//   - difficulty values: "beginner" | "intermediate" | "expert"
+//   - id is UUID string (TEXT PRIMARY KEY in SQLite)
+//   - userId = '' for predefined workouts, real UID for user workouts
+//   - isPredefined: true = seeded system workout, false = user-created
+//   - imageUrl is nullable — predefined workouts may have one
+//   - difficulty: 'beginner' | 'intermediate' | 'expert'
+//   - durationMinutes: estimated session length in minutes
 //   - isSynced stored as INTEGER 0/1 in SQLite
+//   - DateTimes stored as ISO 8601 strings in SQLite
 // ============================================================
 
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -29,10 +30,10 @@ class WorkoutModel {
   final String difficulty;
   final int durationMinutes;
   final bool isPredefined;
+  final String? imageUrl;
   final DateTime createdAt;
   final DateTime updatedAt;
   final bool isSynced;
-  final String? imageUrl; // optional image URL for workout card
 
   WorkoutModel({
     required this.id,
@@ -42,15 +43,16 @@ class WorkoutModel {
     this.difficulty = 'beginner',
     this.durationMinutes = 30,
     this.isPredefined = false,
+    this.imageUrl,
     required this.createdAt,
     required this.updatedAt,
     this.isSynced = false,
-    this.imageUrl,
   });
 
   // ----------------------------------------------------------
   // toMap()
   // Converts this model to a Map for inserting/updating SQLite.
+  // Booleans → INTEGER (1/0), DateTimes → ISO 8601 string.
   // ----------------------------------------------------------
   Map<String, dynamic> toMap() {
     return {
@@ -61,36 +63,38 @@ class WorkoutModel {
       'difficulty': difficulty,
       'durationMinutes': durationMinutes,
       'isPredefined': isPredefined ? 1 : 0,
+      'imageUrl': imageUrl,
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
       'isSynced': isSynced ? 1 : 0,
-      'imageUrl': imageUrl,
     };
   }
 
   // ----------------------------------------------------------
   // fromMap()
   // Builds a WorkoutModel from a SQLite row map.
+  // Called when reading workouts from the local database.
   // ----------------------------------------------------------
   factory WorkoutModel.fromMap(Map<String, dynamic> map) {
     return WorkoutModel(
       id: map['id'],
-      userId: map['userId'],
+      userId: map['userId'] ?? '',
       name: map['name'],
       description: map['description'],
       difficulty: map['difficulty'] ?? 'beginner',
       durationMinutes: map['durationMinutes'] ?? 30,
       isPredefined: map['isPredefined'] == 1,
+      imageUrl: map['imageUrl'],
       createdAt: DateTime.parse(map['createdAt']),
       updatedAt: DateTime.parse(map['updatedAt']),
       isSynced: map['isSynced'] == 1,
-      imageUrl: map['imageUrl'],
     );
   }
 
   // ----------------------------------------------------------
   // toFirestore()
   // Converts this model to a Map for pushing to Firestore.
+  // DateTimes → Firestore Timestamp, isSynced always true here.
   // ----------------------------------------------------------
   Map<String, dynamic> toFirestore() {
     return {
@@ -101,63 +105,78 @@ class WorkoutModel {
       'difficulty': difficulty,
       'durationMinutes': durationMinutes,
       'isPredefined': isPredefined,
+      'imageUrl': imageUrl,
       'createdAt': Timestamp.fromDate(createdAt),
       'updatedAt': Timestamp.fromDate(updatedAt),
       'isSynced': true,
-      'imageUrl': imageUrl,
     };
   }
 
   // ----------------------------------------------------------
   // fromFirestore()
   // Builds a WorkoutModel from a Firestore document map.
+  // Called during restoreFromFirestore() on fresh install.
   // ----------------------------------------------------------
   factory WorkoutModel.fromFirestore(Map<String, dynamic> map) {
     return WorkoutModel(
       id: map['id'],
-      userId: map['userId'],
+      userId: map['userId'] ?? '',
       name: map['name'],
       description: map['description'],
       difficulty: map['difficulty'] ?? 'beginner',
       durationMinutes: map['durationMinutes'] ?? 30,
       isPredefined: map['isPredefined'] ?? false,
+      imageUrl: map['imageUrl'],
       createdAt: (map['createdAt'] as Timestamp).toDate(),
       updatedAt: (map['updatedAt'] as Timestamp).toDate(),
       isSynced: true,
-      imageUrl: map['imageUrl'],
     );
   }
 
   // ----------------------------------------------------------
   // copyWith()
-  // Returns a new WorkoutModel with only the specified fields changed.
-  // Used by workout_controller when editing a workout.
+  // Returns a new WorkoutModel with only specified fields changed.
+  //
+  // DESCRIPTION SENTINEL:
+  //   Standard ?? pattern cannot clear a nullable field back to null
+  //   because null ?? this.description returns the old value.
+  //   Solution: use a private sentinel object. If the caller passes
+  //   clearDescription: true, description is set to null regardless
+  //   of what the description param is.
+  //
+  //   Example — clear description:
+  //     workout.copyWith(clearDescription: true)
+  //   Example — update description:
+  //     workout.copyWith(description: 'New focus')
+  //   Example — leave description unchanged:
+  //     workout.copyWith(name: 'New name')
   // ----------------------------------------------------------
   WorkoutModel copyWith({
     String? id,
     String? userId,
     String? name,
     String? description,
+    bool clearDescription = false,
     String? difficulty,
     int? durationMinutes,
     bool? isPredefined,
+    String? imageUrl,
     DateTime? createdAt,
     DateTime? updatedAt,
     bool? isSynced,
-    String? imageUrl,
   }) {
     return WorkoutModel(
       id: id ?? this.id,
       userId: userId ?? this.userId,
       name: name ?? this.name,
-      description: description ?? this.description,
+      description: clearDescription ? null : (description ?? this.description),
       difficulty: difficulty ?? this.difficulty,
       durationMinutes: durationMinutes ?? this.durationMinutes,
       isPredefined: isPredefined ?? this.isPredefined,
+      imageUrl: imageUrl ?? this.imageUrl,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       isSynced: isSynced ?? this.isSynced,
-      imageUrl: imageUrl ?? this.imageUrl,
     );
   }
 }

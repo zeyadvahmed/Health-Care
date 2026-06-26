@@ -31,6 +31,9 @@ class MedicalRecordModel {
   final String? endDate;
   final DateTime updatedAt;
   final bool isSynced;
+  final bool isTaken;
+  final String? notes;
+  final DateTime createdAt;
 
   MedicalRecordModel({
     required this.id,
@@ -44,6 +47,9 @@ class MedicalRecordModel {
     this.endDate,
     required this.updatedAt,
     this.isSynced = false,
+    this.isTaken = false,
+    this.notes,
+    required this.createdAt,
   });
 
   // ----------------------------------------------------------
@@ -64,6 +70,9 @@ class MedicalRecordModel {
       'endDate': endDate,
       'updatedAt': updatedAt.toIso8601String(),
       'isSynced': isSynced ? 1 : 0,
+      'isTaken': isTaken ? 1 : 0,
+      'notes': notes,
+      'createdAt': createdAt.toIso8601String(),
     };
   }
 
@@ -87,6 +96,9 @@ class MedicalRecordModel {
       endDate: map['endDate'],
       updatedAt: DateTime.parse(map['updatedAt']),
       isSynced: map['isSynced'] == 1,
+      isTaken: map['isTaken'] == 1,
+      notes: map['notes'],
+      createdAt: DateTime.parse(map['createdAt']),
     );
   }
 
@@ -108,6 +120,9 @@ class MedicalRecordModel {
       'endDate': endDate,
       'updatedAt': Timestamp.fromDate(updatedAt),
       'isSynced': true,
+      'isTaken': isTaken,
+      'notes': notes,
+      'createdAt': Timestamp.fromDate(createdAt),
     };
   }
 
@@ -128,6 +143,9 @@ class MedicalRecordModel {
       endDate: map['endDate'],
       updatedAt: (map['updatedAt'] as Timestamp).toDate(),
       isSynced: true,
+      isTaken: map['isTaken'] ?? false,
+      notes: map['notes'],
+      createdAt: (map['createdAt'] as Timestamp).toDate(),
     );
   }
 
@@ -148,6 +166,9 @@ class MedicalRecordModel {
     String? endDate,
     DateTime? updatedAt,
     bool? isSynced,
+    bool? isTaken,
+    String? notes,
+    DateTime? createdAt,
   }) {
     return MedicalRecordModel(
       id: id ?? this.id,
@@ -161,6 +182,9 @@ class MedicalRecordModel {
       endDate: endDate ?? this.endDate,
       updatedAt: updatedAt ?? this.updatedAt,
       isSynced: isSynced ?? this.isSynced,
+      isTaken: isTaken ?? this.isTaken,
+      notes: notes ?? this.notes,
+      createdAt: createdAt ?? this.createdAt,
     );
   }
 }
