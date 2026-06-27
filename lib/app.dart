@@ -1,23 +1,12 @@
 // ============================================================
 // app.dart
 // Root widget of the SparkSteel application.
-//
-// Responsibilities:
-//   1. Create the MaterialApp
-//   2. Connect the global theme (AppTheme)
-//   3. Connect all named routes (AppRoutes)
-//   4. Set the starting screen to SplashScreen
-//   5. Handle dark mode based on system setting
-//
-// NOTE — MultiBlocProvider:
-//   Cubits are registered in main.dart above this widget,
-//   not here. This keeps app.dart focused on MaterialApp config.
 // ============================================================
 
 import 'package:flutter/material.dart';
 
-import 'core/theme/app_theme.dart';
 import 'core/constants/app_strings.dart';
+import 'core/theme/app_theme.dart';
 import 'routes/app_routes.dart';
 
 class SparkSteelApp extends StatelessWidget {
@@ -26,45 +15,19 @@ class SparkSteelApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      // ── App identity ───────────────────────────────────────
       title: '${AppStrings.appFname}${AppStrings.appLname}',
-
-      // ── Hide the debug banner ──────────────────────────────
       debugShowCheckedModeBanner: false,
-
-      // ── Light theme ────────────────────────────────────────
       theme: AppTheme.lightTheme,
-
-      // ── Dark theme ─────────────────────────────────────────
-      // Activated when user toggles dark mode in Profile.
       darkTheme: AppTheme.darkTheme,
-
-      // ── Theme mode ─────────────────────────────────────────
-      // Follows device setting by default.
-      // ProfileController changes this when user toggles.
       themeMode: ThemeMode.system,
-
-      // ── Starting screen ────────────────────────────────────
-      // SplashScreen checks Firebase auth state:
-      //   logged in  → HomeScreen  (pushReplacementNamed)
-      //   logged out → LoginScreen (pushReplacementNamed)
-      //   checking   → splash UI with progress bar
       initialRoute: AppRoutes.splash,
-
-      // ── All named routes ───────────────────────────────────
       routes: AppRoutes.routes,
-
-      // ── Unknown route fallback ─────────────────────────────
       onUnknownRoute: (settings) =>
           MaterialPageRoute(builder: (_) => const _RouteNotFoundScreen()),
     );
   }
 }
 
-// ============================================================
-// _RouteNotFoundScreen
-// Only shown if navigation is called with a wrong route name.
-// ============================================================
 class _RouteNotFoundScreen extends StatelessWidget {
   const _RouteNotFoundScreen();
 

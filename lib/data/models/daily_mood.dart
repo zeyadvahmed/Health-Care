@@ -1,27 +1,23 @@
-class MoodEntry {
+class DailyMood {
   final String id;
   final String mood;
-  final String note;
   final String date;
- 
-  MoodEntry({
+
+  DailyMood({
     required this.id,
     required this.mood,
-    required this.note,
     required this.date,
   });
- 
+
   Map<String, dynamic> toMap() => {
         'id': id,
         'mood': mood,
-        'note': note,
         'date': date,
       };
- 
-  factory MoodEntry.fromMap(Map<String, dynamic> map) => MoodEntry(
+
+  factory DailyMood.fromMap(Map<String, dynamic> map) => DailyMood(
         id: map['id'],
         mood: map['mood'],
-        note: map['note'],
         date: map['date'],
       );
 }

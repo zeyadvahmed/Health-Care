@@ -1,22 +1,22 @@
 import 'package:flutter/material.dart';
 
-import '../../core/constants/app_colors.dart';
-
 import '../../core/constants/app_spacing.dart';
 
 import '../../core/constants/app_text_styles.dart';
 
 import '../../core/layouts/main_layout.dart';
+import '../../routes/app_routes.dart';
 
 import '../../shared/widgets/info_card.dart';
 
-import '../../shared/widgets/workout_card.dart';
+import '../../shared/widgets/cards/workout_card.dart';
 
 import '../../shared/widgets/explore_card.dart';
 
 import '../../data/models/workout_model.dart';
 
 import '../../data/services/workout_service.dart';
+import '../workout/workout_overview_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -51,16 +51,31 @@ class _HomeScreenState
     });
   }
 
+  void _openWorkoutOverview(WorkoutModel workout) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => WorkoutOverviewScreen(
+          workout: workout,
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
 
     return MainLayout(
 
-      child: Column(
-        crossAxisAlignment:
-            CrossAxisAlignment.start,
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.only(
+          bottom: AppSpacing.large,
+        ),
+        child: Column(
+          crossAxisAlignment:
+              CrossAxisAlignment.start,
 
-        children: [
+          children: [
 
           const Text(
             'Welcome, Basmala',
@@ -86,7 +101,7 @@ class _HomeScreenState
                 AppSpacing.large,
           ),
 
-          const InfoCard(
+          InfoCard(
             title: 'Feeling Happy',
 
             subtitle:
@@ -94,9 +109,14 @@ class _HomeScreenState
 
             icon:
                 Icons.emoji_emotions,
+
+            onTap: () => Navigator.pushNamed(
+              context,
+              AppRoutes.mentalHealth,
+            ),
           ),
 
-          const InfoCard(
+          InfoCard(
             title: '1.5L / 2.5L',
 
             subtitle:
@@ -104,16 +124,23 @@ class _HomeScreenState
 
             icon:
                 Icons.water_drop,
+
+            onTap: () => Navigator.pushNamed(
+              context,
+              AppRoutes.hydration,
+            ),
           ),
 
           if (workouts.isNotEmpty)
 
             WorkoutCard(
-              title:
-                  workouts.last.title,
+              workout:
+                  workouts.last,
 
-              duration:
-                  workouts.last.duration,
+              isPredefined:
+                  workouts.last.isPredefined,
+
+              onViewDetails: () => _openWorkoutOverview(workouts.last),
             ),
 
           const Text(
@@ -129,13 +156,18 @@ class _HomeScreenState
           ),
 
           Wrap(
-            children: const [
+            children: [
 
               ExploreCard(
                 title: 'Workout',
 
                 icon:
                     Icons.fitness_center,
+
+                onTap: () => Navigator.pushNamed(
+                  context,
+                  AppRoutes.workoutList,
+                ),
               ),
 
               ExploreCard(
@@ -144,6 +176,11 @@ class _HomeScreenState
 
                 icon:
                     Icons.medical_services,
+
+                onTap: () => Navigator.pushNamed(
+                  context,
+                  AppRoutes.medicalTracker,
+                ),
               ),
 
               ExploreCard(
@@ -152,6 +189,11 @@ class _HomeScreenState
 
                 icon:
                     Icons.restaurant,
+
+                onTap: () => Navigator.pushNamed(
+                  context,
+                  AppRoutes.nutrition,
+                ),
               ),
 
               ExploreCard(
@@ -160,6 +202,11 @@ class _HomeScreenState
 
                 icon:
                     Icons.psychology,
+
+                onTap: () => Navigator.pushNamed(
+                  context,
+                  AppRoutes.mentalHealth,
+                ),
               ),
 
               ExploreCard(
@@ -168,10 +215,16 @@ class _HomeScreenState
 
                 icon:
                     Icons.local_drink,
+
+                onTap: () => Navigator.pushNamed(
+                  context,
+                  AppRoutes.hydration,
+                ),
               ),
             ],
-          ),
-        ],
+            ),
+          ],
+        ),
       ),
     );
   }

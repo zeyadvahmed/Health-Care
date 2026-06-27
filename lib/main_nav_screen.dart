@@ -1,61 +1,45 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
+import 'features/activity/cubit/activity_cubit.dart';
+import 'features/activity/ui/activity_screen.dart';
 import 'features/home/home_screen.dart';
-import 'features/home/add_workout_screen.dart';
-
+import 'features/progress/progress_screen.dart';
 import 'features/profile/profile_screen.dart';
-
 import 'shared/widgets/bottom_nav_bar.dart';
 
-class MainNavScreen
-    extends StatefulWidget {
-
-  const MainNavScreen({
-    super.key,
-  });
+class MainNavScreen extends StatefulWidget {
+  const MainNavScreen({super.key});
 
   @override
-  State<MainNavScreen>
-      createState() =>
-          _MainNavScreenState();
+  State<MainNavScreen> createState() => _MainNavScreenState();
 }
 
-class _MainNavScreenState
-    extends State<MainNavScreen> {
-
+class _MainNavScreenState extends State<MainNavScreen> {
   int currentIndex = 0;
 
   final List<Widget> screens = [
-
     const HomeScreen(),
-
-    AddWorkoutScreen(),
-
-    const Center(
-      child: Text(
-        'Progress Screen',
+    BlocProvider(
+      create: (_) => ActivityCubit(),
+      child: const ActivityScreen(
+        userId: '',
+        uid: '',
+        userName: '',
       ),
     ),
 
+    const ProgressScreen(),
     const ProfileScreen(),
   ];
 
   @override
   Widget build(BuildContext context) {
-
     return Scaffold(
-
-      body:
-          screens[currentIndex],
-
-      bottomNavigationBar:
-          BottomNavBar(
-
-        currentIndex:
-            currentIndex,
-
+      body: screens[currentIndex],
+      bottomNavigationBar: BottomNavBar(
+        currentIndex: currentIndex,
         onTap: (index) {
-
           setState(() {
             currentIndex = index;
           });

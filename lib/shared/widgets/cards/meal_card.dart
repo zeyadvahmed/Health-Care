@@ -28,8 +28,8 @@
 // ============================================================
 
 import 'package:flutter/material.dart';
-import '../../../../core/constants/app_colors.dart';
-import '../../../../data/models/nutrition_meal_model.dart';
+import 'package:sparksteel/core/constants/app_colors.dart';
+import 'package:sparksteel/data/models/nutrition_meal_model.dart';
 
 class MealCard extends StatelessWidget {
   final String mealType;

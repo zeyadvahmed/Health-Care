@@ -30,7 +30,7 @@
 
 import '../models/exercise_model.dart';
 import 'firestore_service.dart';
-
+ 
 class RemoteExerciseService {
 
   // ----------------------------------------------------------
