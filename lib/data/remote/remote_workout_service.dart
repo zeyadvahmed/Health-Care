@@ -33,6 +33,7 @@ import '../models/workout_exercise_model.dart';
 import '../models/workout_session_model.dart';
 import '../models/session_log_model.dart';
 import 'firestore_service.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class RemoteWorkoutService {
 
@@ -43,14 +44,18 @@ class RemoteWorkoutService {
   static final RemoteWorkoutService instance =
       RemoteWorkoutService._internal();
 
+  final FirebaseFirestore _db = FirebaseFirestore.instance;
+
+  static const int _batchSize = 450;
+
   // Collection path constants and builders
   static const String _workouts = 'workouts';
   String _workoutExercisesPath(String uid) =>
-      'users/$uid/workout_exercises';
+      'User/$uid/workout_exercises';
   String _sessionsPath(String uid) =>
-      'users/$uid/workout_sessions';
+      'User/$uid/workout_sessions';
   String _logsPath(String uid) =>
-      'users/$uid/session_logs';
+      'User/$uid/session_logs';
 
   // ═══════════════════════════════════════════════════════════
   // PUSH — write to Firestore
@@ -91,6 +96,17 @@ class RemoteWorkoutService {
     );
   }
 
+  Future<void> pushAllWorkoutExercises(
+    String uid,
+    List<WorkoutExerciseModel> exercises,
+  ) async {
+    await _pushAllModels(
+      collection: _workoutExercisesPath(uid),
+      ids: exercises.map((item) => item.id),
+      data: exercises.map((item) => item.toFirestore()),
+    );
+  }
+
   // ----------------------------------------------------------
   // pushSession()
   // Pushes a COMPLETED session to the user's subcollection.
@@ -105,6 +121,17 @@ class RemoteWorkoutService {
     );
   }
 
+  Future<void> pushAllSessions(
+    String uid,
+    List<WorkoutSessionModel> sessions,
+  ) async {
+    await _pushAllModels(
+      collection: _sessionsPath(uid),
+      ids: sessions.map((item) => item.id),
+      data: sessions.map((item) => item.toFirestore()),
+    );
+  }
+
   // ----------------------------------------------------------
   // pushSessionLog()
   // Pushes one set log to the user's subcollection.
@@ -115,6 +142,17 @@ class RemoteWorkoutService {
       _logsPath(uid),
       log.id,
       log.toFirestore(),
+    );
+  }
+
+  Future<void> pushAllSessionLogs(
+    String uid,
+    List<SessionLogModel> logs,
+  ) async {
+    await _pushAllModels(
+      collection: _logsPath(uid),
+      ids: logs.map((item) => item.id),
+      data: logs.map((item) => item.toFirestore()),
     );
   }
 
@@ -210,5 +248,52 @@ class RemoteWorkoutService {
     return docs
         .map((doc) => SessionLogModel.fromFirestore(doc))
         .toList();
+  }
+
+  Future<void> _pushAllModels({
+    required String collection,
+    required Iterable<String> ids,
+    required Iterable<Map<String, dynamic>> data,
+  }) async {
+    final idList = ids.toList();
+    final dataList = data.toList();
+    final snapshot = await _db.collection(collection).get();
+    final localIds = idList.toSet();
+
+    final operations = <Map<String, dynamic>>[];
+
+    for (final doc in snapshot.docs) {
+      if (!localIds.contains(doc.id)) {
+        operations.add({
+          'type': 'delete',
+          'collection': collection,
+          'docId': doc.id,
+        });
+      }
+    }
+
+    for (var i = 0; i < idList.length; i++) {
+      operations.add({
+        'type': 'set',
+        'collection': collection,
+        'docId': idList[i],
+        'data': dataList[i],
+      });
+    }
+
+    await _batchWriteInChunks(operations);
+  }
+
+  Future<void> _batchWriteInChunks(
+    List<Map<String, dynamic>> operations,
+  ) async {
+    if (operations.isEmpty) return;
+
+    for (var i = 0; i < operations.length; i += _batchSize) {
+      final end = i + _batchSize < operations.length
+          ? i + _batchSize
+          : operations.length;
+      await FirestoreService.instance.batchWrite(operations.sublist(i, end));
+    }
   }
 }

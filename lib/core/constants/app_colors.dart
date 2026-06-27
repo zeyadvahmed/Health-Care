@@ -27,8 +27,13 @@ class AppColors {
 
   // ── Backgrounds ────────────────────────────────────────────
   static const Color splashBackground = Color(0xFF082644); // splash + auth top
+  static const Color background = Color(0xFFF6F7F8);
+  static const Color primary = steelColor;
   static const Color profileBackground = steelColor; // profile header
   static const Color cardBackground = Color(0xFFFCFCFC); // all white cards
+  static const Color card = cardBackground;
+  static const Color darkBackground = Color(0xFF071B2F);
+  static const Color darkCard = Color(0xFF0D3358);
   static const Color inputFill = Color(0xFFEEEEEE); // text field background
 
   // ── Text ───────────────────────────────────────────────────
@@ -62,14 +67,17 @@ class AppColors {
   // ── Workout ────────────────────────────────────────────────
   static const Color setDone = Color(0xFF4CAF50); // completed set checkbox
   static const Color numberSetActive = steelColor; // current active set number
+  static const Color workoutColor = steelColor;
 
   // ── Nutrition ──────────────────────────────────────────────
   static const Color proteinColor = Color(0xFFF3B843); // protein macro bar
   static const Color carbColor = Color(0xFF3CB663); // carbs macro bar
   static const Color fatColor = Color(0xFFE23C7F); // fats macro bar
+  static const Color nutritionColor = carbColor;
 
   // ── Hydration ──────────────────────────────────────────────
   static const Color hydrationRing = Color(0xFF89C2FE); // water circular ring
+  static const Color hydrationColor = hydrationRing;
 
   // ── Mood ───────────────────────────────────────────────────
   static const Color moodHappy = steelColor; // happy mood icon

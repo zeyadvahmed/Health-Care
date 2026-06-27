@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:sparksteel/core/constants/app_colors.dart';
-import 'package:sparksteel/features/mental_health/model/guided_exercise.dart';
+import 'package:sparksteel/data/models/guided_exercise.dart';
 
 class GuidedItem extends StatelessWidget {
   GuidedExercise exercise;

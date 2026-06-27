@@ -22,6 +22,11 @@
 // ============================================================
 
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:sparksteel/features/mental_health/logic/mental_cubit.dart';
+import 'package:sparksteel/features/mental_health/logic/mental_state.dart';
+import 'package:sparksteel/data/models/guided_exercise.dart';
+import 'package:sparksteel/features/mental_health/ui/widgets/guided_exercises_widget.dart';
 import 'package:sparksteel/features/mental_health/ui/widgets/mood_btn.dart';
 import 'package:sparksteel/features/mental_health/ui/widgets/mood_history.dart';
 import 'package:sparksteel/features/mental_health/ui/widgets/note_widget.dart';
@@ -35,7 +40,7 @@ class MentalHealthScreen extends StatelessWidget {
       backgroundColor: Color(0xffF6F7F8),
       appBar: AppBar(title: Text('Mental Health')),
       body: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 20.0,vertical: 10.0),
+        padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),
         child: SingleChildScrollView(
           child: Column(
             spacing: 10,
@@ -44,7 +49,7 @@ class MentalHealthScreen extends StatelessWidget {
               Text(
                 'How are you feeling today?',
                 style: TextStyle(
-                  fontSize: 18,
+                  fontSize: 16,
                   color: Colors.black,
                   fontWeight: FontWeight.w600,
                 ),
@@ -78,7 +83,7 @@ class MentalHealthScreen extends StatelessWidget {
               Text(
                 'Daily Reflection',
                 style: TextStyle(
-                  fontSize: 18,
+                  fontSize: 16,
                   color: Colors.black,
                   fontWeight: FontWeight.w600,
                 ),
@@ -92,8 +97,21 @@ class MentalHealthScreen extends StatelessWidget {
                   fontWeight: FontWeight.w600,
                 ),
               ),
-              
-          
+              SizedBox(
+                height: 400,
+                child: BlocBuilder<MentalCubit, MentalState>(
+                  builder: (context, state) {
+                    List<GuidedExercise> exercises = context.read<MentalCubit>().guidedExercises;
+                    return ListView.separated(
+                      itemBuilder: (context, index) {
+                        return GuidedItem(exercise: exercises[index],);
+                      },
+                      separatorBuilder: (_, _) => SizedBox(height: 10),
+                      itemCount: exercises.length,
+                    );
+                  },
+                ),
+              ),
             ],
           ),
         ),

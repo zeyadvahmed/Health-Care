@@ -353,6 +353,9 @@ class WorkoutController extends Cubit<WorkoutState> {
       final models = await RemoteExerciseService.instance.fetchAllExercises();
       if (models.isEmpty) return;
 
+      // Fetch all exercise documents from Firestore
+      // This is the only Firestore READ in normal app flow
+      // Bulk insert into SQLite using batch for performance
       await LocalExerciseService.instance.insertAllExercises(models);
       debugPrint('WorkoutController: seeded ${models.length} exercises');
     } catch (e) {

@@ -1,12 +1,12 @@
-import 'package:sparlsteel/data/database/database_helper.dart';
+import 'package:sparksteel/data/local/database_helper.dart';
 
-import 'package:sparlsteel/data/models/workout_model.dart';
+import 'package:sparksteel/data/models/workout_model.dart';
 
 class WorkoutService {
 
   final DatabaseHelper
       _databaseHelper =
-      DatabaseHelper();
+      DatabaseHelper.instance;
 
   // INSERT
   Future<void> insertWorkout(
@@ -48,7 +48,7 @@ class WorkoutService {
 
   // DELETE
   Future<void> deleteWorkout(
-    int id,
+    String id,
   ) async {
 
     final db =

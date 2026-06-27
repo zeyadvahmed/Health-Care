@@ -40,8 +40,7 @@ import '../../shared/widgets/layout/empty_state_widget.dart';
 import 'workout_controller.dart';
 import 'workout_state.dart';
 import 'create_workout_screen.dart';
-// Uncomment when WorkoutOverviewScreen is built:
-// import 'workout_overview_screen.dart';
+import 'workout_overview_screen.dart';
 
 // ── File-level color constants ────────────────────────────────
 // TODO: Move into AppColors once the design palette is finalised.
@@ -104,18 +103,14 @@ class _WorkoutListScreenState extends State<WorkoutListScreen> {
   /// Uses Navigator.push (PASS DATA) — never pushNamed.
   /// TODO: uncomment when WorkoutOverviewScreen is built.
   void _navigateToOverview(WorkoutModel workout) {
-    // Navigator.push(
-    //   context,
-    //   MaterialPageRoute(
-    //     builder: (_) => WorkoutOverviewScreen(
-    //       workout: workout,
-    //       userId:  widget.userId,
-    //     ),
-    //   ),
-    // );
-    Helpers.showSuccessSnackBar(
+    Navigator.push(
       context,
-      'WorkoutOverviewScreen not built yet.',
+      MaterialPageRoute(
+        builder: (_) => WorkoutOverviewScreen(
+          workout: workout,
+          userId: widget.userId,
+        ),
+      ),
     );
   }
 
@@ -370,15 +365,17 @@ class _PredefinedWorkoutCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: _kCardBg,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      clipBehavior: Clip.hardEdge,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
+    return GestureDetector(
+      onTap: onViewDetails,
+      child: Container(
+        decoration: BoxDecoration(
+          color: _kCardBg,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        clipBehavior: Clip.hardEdge,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
           // ── Image area ──────────────────────────────────
           Expanded(
             child: Stack(
@@ -491,7 +488,8 @@ class _PredefinedWorkoutCard extends StatelessWidget {
               ],
             ),
           ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -528,14 +526,16 @@ class _MyWorkoutCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final difficultyColor = Helpers.difficultyColor(workout.difficulty);
 
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      decoration: BoxDecoration(
-        color: _kCardBg,
-        borderRadius: BorderRadius.circular(14),
-      ),
-      child: Row(
-        children: [
+    return GestureDetector(
+      onTap: onViewDetails,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: _kCardBg,
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Row(
+          children: [
           // Icon
           Container(
             width: 46,
@@ -607,7 +607,8 @@ class _MyWorkoutCard extends StatelessWidget {
           _iconBtn(Icons.visibility_outlined, Colors.white54, onViewDetails),
           _iconBtn(Icons.edit_outlined, AppColors.steelColor, onEdit),
           _iconBtn(Icons.delete_outline, AppColors.error, onDelete),
-        ],
+          ],
+        ),
       ),
     );
   }

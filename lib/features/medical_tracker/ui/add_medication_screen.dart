@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:uuid/uuid.dart';
-import '../../../../core/constants/app_colors.dart';
-import '../../../../core/constants/app_strings.dart';
-import '../../../../core/utils/validators.dart';
-import '../../../../data/models/medical_record_model.dart';
-import '../../../../shared/widgets/buttons/custom_button.dart';
-import '../../../../shared/widgets/inputs/custom_textfield.dart';
+import 'package:sparksteel/core/constants/app_colors.dart';
+import 'package:sparksteel/core/constants/app_strings.dart';
+import 'package:sparksteel/core/utils/validators.dart';
+import 'package:sparksteel/data/models/medical_record_model.dart';
+import 'package:sparksteel/shared/widgets/buttons/custom_button.dart';
+import 'package:sparksteel/shared/widgets/inputs/custom_textfield.dart';
 import '../cubit/medical_cubit.dart';
 import '../cubit/medical_state.dart';
 

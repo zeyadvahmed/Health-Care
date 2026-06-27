@@ -126,14 +126,26 @@ class AddWorkoutScreen
               final workout =
                   WorkoutModel(
 
-                title:
+                id:
+                    DateTime.now().microsecondsSinceEpoch.toString(),
+
+                userId:
+                    '',
+
+                name:
                     titleController.text,
 
-                duration:
-                    durationController.text,
+                description:
+                    'Calories: ${caloriesController.text}',
 
-                calories:
-                    caloriesController.text,
+                durationMinutes:
+                    int.tryParse(durationController.text) ?? 30,
+
+                createdAt:
+                    DateTime.now(),
+
+                updatedAt:
+                    DateTime.now(),
               );
 
               await context

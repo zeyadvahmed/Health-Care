@@ -8,7 +8,7 @@ class DailyGoal {
   const DailyGoal({
     this.id,
     this.targetCalories = 2000,
-  
+
   });
 
   Map<String, dynamic> toMap() {
@@ -23,7 +23,7 @@ class DailyGoal {
     return DailyGoal(
       id: map['id'],
       targetCalories: map['target_calories'],
-  
+
     );
   }
 }

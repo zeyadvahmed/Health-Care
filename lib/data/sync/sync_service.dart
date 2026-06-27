@@ -45,13 +45,21 @@
 //   - No Flutter UI imports
 // ============================================================
 
+import '../local/local_activity_service.dart';
 import '../local/local_exercise_service.dart';
+import '../local/local_hydration_service.dart';
+import '../local/local_medical_service.dart';
+import '../local/local_mood_service.dart';
+import '../local/local_nutrition_service.dart';
 import '../local/local_workout_service.dart';
 import '../local/local_session_service.dart';
-// import '../local/local_activity_service.dart'; // ← uncomment when implemented
+import '../remote/remote_activity_service.dart';
 import '../remote/remote_exercise_service.dart';
+import '../remote/remote_hydration_service.dart';
+import '../remote/remote_medical_service.dart';
+import '../remote/remote_mood_service.dart';
+import '../remote/remote_nutrition_service.dart';
 import '../remote/remote_workout_service.dart';
-// import '../remote/remote_activity_service.dart'; // ← uncomment when implemented
 import 'connectivity_service.dart';
 
 class SyncService {
@@ -116,15 +124,35 @@ class SyncService {
       print('SyncService._syncSessionLogs failed: $e');
     }
 
-    // _syncActivity() is commented out — LocalActivityService and
-    // RemoteActivityService have no implemented methods yet.
-    // Restore this block once both services are implemented:
-    //
-    // try {
-    //   await _syncActivity();
-    // } catch (e) {
-    //   print('SyncService._syncActivity failed: $e');
-    // }
+    try {
+      await _syncNutrition(uid);
+    } catch (e) {
+      print('SyncService._syncNutrition failed: $e');
+    }
+
+    try {
+      await _syncMood(uid);
+    } catch (e) {
+      print('SyncService._syncMood failed: $e');
+    }
+
+    try {
+      await _syncHydration(uid);
+    } catch (e) {
+      print('SyncService._syncHydration failed: $e');
+    }
+
+    try {
+      await _syncMedical(uid);
+    } catch (e) {
+      print('SyncService._syncMedical failed: $e');
+    }
+
+    try {
+      await _syncActivity(uid);
+    } catch (e) {
+      print('SyncService._syncActivity failed: $e');
+    }
   }
 
   // ----------------------------------------------------------
@@ -213,6 +241,60 @@ class SyncService {
   // ----------------------------------------------------------
 
   // ═══════════════════════════════════════════════════════════
+  // ----------------------------------------------------------
+  // _syncNutrition()
+  // Nutrition tables do not have isSynced columns yet, so this
+  // pushes the current local snapshot to Firestore.
+  // ----------------------------------------------------------
+  Future<void> _syncNutrition(String uid) async {
+    final localNutrition = LocalNutritionService();
+    final foodItems = await localNutrition.getAllFoodItems();
+    final dailyGoal = await localNutrition.getDailyGoal();
+
+    await RemoteNutritionService.instance.pushAllFoodItems(uid, foodItems);
+    await RemoteNutritionService.instance.updateDailyGoal(uid, dailyGoal);
+  }
+
+  // ----------------------------------------------------------
+  // _syncMood()
+  // Mood tables do not have isSynced columns yet, so this
+  // pushes the current local snapshot to Firestore.
+  // ----------------------------------------------------------
+  Future<void> _syncMood(String uid) async {
+    final localMood = LocalMoodService();
+    final entries = await localMood.getAllMoodEntries();
+    final dailyMoods = await localMood.getAllDailyMoods();
+
+    await RemoteMoodService.instance.pushAllMoodEntries(uid, entries);
+    await RemoteMoodService.instance.pushAllDailyMoods(uid, dailyMoods);
+  }
+
+  Future<void> _syncHydration(String uid) async {
+    final unsynced = await LocalHydrationService.instance.getUnsyncedEntries();
+    for (final entry in unsynced) {
+      await RemoteHydrationService.instance.pushEntry(entry, uid);
+      await LocalHydrationService.instance.markEntrySynced(entry.id);
+    }
+  }
+
+  Future<void> _syncMedical(String uid) async {
+    final unsynced =
+        await LocalMedicalService.instance.getUnsyncedMedicalRecords();
+    for (final record in unsynced) {
+      await RemoteMedicalService.instance.pushMedicalRecord(record, uid);
+      await LocalMedicalService.instance.markMedicalRecordSynced(record.id);
+    }
+  }
+
+  Future<void> _syncActivity(String uid) async {
+    final unsynced =
+        await LocalActivityService.instance.getUnsyncedActivity();
+    for (final activity in unsynced) {
+      await RemoteActivityService.instance.pushActivity(uid, activity);
+      await LocalActivityService.instance.markActivitySynced(activity.id);
+    }
+  }
+
   // PULL — Firestore → SQLite (restore on fresh install)
   // ═══════════════════════════════════════════════════════════
 
@@ -306,6 +388,79 @@ class SyncService {
       }
     } catch (e) {
       print('restoreFromFirestore: session_logs failed → $e');
+    }
+
+    // ── Step 6: Nutrition ─────────────────────────────────
+    // Pull all food items and the daily calorie goal for the user.
+    try {
+      final localNutrition = LocalNutritionService();
+      final foodItems = await RemoteNutritionService.instance.getAllFoodItems(
+        uid,
+      );
+      await localNutrition.clear();
+      for (final item in foodItems) {
+        await localNutrition.insertFoodItem(item);
+      }
+
+      final dailyGoal = await RemoteNutritionService.instance.getDailyGoal(uid);
+      await localNutrition.updateDailyGoal(dailyGoal);
+    } catch (e) {
+      print('restoreFromFirestore: nutrition failed → $e');
+    }
+
+    // ── Step 7: Mood ──────────────────────────────────────
+    // Pull all mood entries and daily mood summaries for the user.
+    try {
+      final localMood = LocalMoodService();
+      final entries = await RemoteMoodService.instance.getAllMoodEntries(uid);
+      final dailyMoods = await RemoteMoodService.instance.getAllDailyMoods(uid);
+
+      await localMood.clearMoodData();
+      for (final mood in dailyMoods) {
+        await localMood.upsertDailyMood(mood);
+      }
+      for (final entry in entries) {
+        await localMood.insertMoodEntry(entry);
+      }
+    } catch (e) {
+      print('restoreFromFirestore: mood failed → $e');
+    }
+
+    try {
+      final entries =
+          await RemoteHydrationService.instance.fetchEntriesForUser(uid);
+      for (final entry in entries) {
+        await LocalHydrationService.instance.insertEntry(
+          entry.copyWith(isSynced: true),
+        );
+      }
+    } catch (e) {
+      print('restoreFromFirestore: hydration failed -> $e');
+    }
+
+    try {
+      final records =
+          await RemoteMedicalService.instance.fetchMedicalRecordsForUser(uid);
+      for (final record in records) {
+        await LocalMedicalService.instance.insertMedicalRecord(
+          record.copyWith(isSynced: true),
+        );
+      }
+    } catch (e) {
+      print('restoreFromFirestore: medical failed -> $e');
+    }
+
+    try {
+      final activities = await RemoteActivityService.instance.fetchActivities(
+        uid,
+      );
+      for (final activity in activities) {
+        await LocalActivityService.instance.insertActivity(
+          activity.copyWith(isSynced: true),
+        );
+      }
+    } catch (e) {
+      print('restoreFromFirestore: activity failed -> $e');
     }
   }
 }

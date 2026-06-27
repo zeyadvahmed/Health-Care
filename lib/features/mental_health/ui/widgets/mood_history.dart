@@ -9,7 +9,7 @@ class MoodHistory extends StatelessWidget {
     return Card(
       elevation: 2,
       child: Container(
-        height: 210,
+        height: 220,
         width: double.infinity,
         decoration: BoxDecoration(
           color: Colors.white,
@@ -26,15 +26,15 @@ class MoodHistory extends StatelessWidget {
                     child: Text(
                       'Mood History',
                       style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
                         color: Colors.black,
                       ),
                     ),
                   ),
                   Text(
                     'Last 7 days',
-                    style: TextStyle(fontSize: 14, color: AppColors.moodHappy),
+                    style: TextStyle(fontSize: 12, color: AppColors.moodHappy),
                   ),
                 ],
               ),

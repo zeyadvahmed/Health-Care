@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../../../../core/constants/app_colors.dart';
-import '../../../../core/constants/app_strings.dart';
-import '../../../../shared/widgets/indicators/loading_widget.dart';
+import 'package:sparksteel/core/constants/app_colors.dart';
+import 'package:sparksteel/core/constants/app_strings.dart';
+import 'package:sparksteel/shared/widgets/indicators/loading_widget.dart';
 import '../cubit/medical_cubit.dart';
 import '../cubit/medical_state.dart';
 import 'widgets/medication_card.dart';

@@ -17,7 +17,7 @@
 // ============================================================
 
 import 'package:flutter/material.dart';
-import '../../../../core/constants/app_colors.dart';
+import 'package:sparksteel/core/constants/app_colors.dart';
 
 class ChatBubble extends StatelessWidget {
   final String message;
