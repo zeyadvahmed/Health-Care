@@ -282,8 +282,7 @@ class WorkoutHistoryScreen
 
                                     Text(
 
-                                      workout
-                                          .duration,
+                                      '${workout.durationMinutes}',
 
                                       style:
                                           const TextStyle(
@@ -313,7 +312,7 @@ class WorkoutHistoryScreen
 
                             Text(
 
-                              workout.title,
+                              workout.name,
 
                               style:
                                   const TextStyle(
@@ -349,7 +348,7 @@ class WorkoutHistoryScreen
                                 infoBox(
                                   Icons.fitness_center,
 
-                                  workout.calories,
+                                  workout.description ?? '0',
 
                                   'Total Volume',
                                 ),

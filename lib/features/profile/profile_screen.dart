@@ -6,7 +6,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../../data/services/auth_service.dart';
 
-import '../../data/database/database_helper.dart';
+import '../../data/local/database_helper.dart';
 
 import '../auth/login_screen.dart';
 
@@ -25,7 +25,7 @@ class _ProfileScreenState
     extends State<ProfileScreen> {
 
   final dbHelper =
-      DatabaseHelper();
+      DatabaseHelper.instance;
 
   Map<String, dynamic>? data;
 

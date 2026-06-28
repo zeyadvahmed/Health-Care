@@ -4,7 +4,7 @@
 //
 // PURPOSE:
 //   Singleton that opens and manages the SQLite database file
-//   sparksteel.db. Creates all 12 tables on first launch.
+//   sparksteel.db. Creates all app tables on first launch.
 //
 // HOW IT WORKS:
 //   - Uses singleton pattern so only ONE database connection
@@ -56,10 +56,10 @@ class DatabaseHelper {
   // ----------------------------------------------------------
   // _initDB()
   // Finds the correct path for the database file on device,
-  // then opens it. 'version: 1' is the schema version.
+  // then opens it. 'version' is the schema version.
   // 'onCreate' only runs when the file does not exist yet.
   // ----------------------------------------------------------
-  Future<Database> _initDB() async {
+  static Future<Database> _initDB() async {
     // getDatabasesPath() returns the device's documents directory
     final dbPath = await getDatabasesPath();
     // join() builds the full path: /data/user/.../sparksteel.db
@@ -67,9 +67,243 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 1,
+      version: 5,
       onCreate: _onCreate, // runs once on fresh install
+      onUpgrade: _onUpgrade,
     );
+  }
+
+  static Future<void> _onUpgrade(
+    Database db,
+    int oldVersion,
+    int newVersion,
+  ) async {
+    await _createMergedTablesIfMissing(db);
+
+    await _addColumnIfMissing(db, 'workouts', 'imageUrl', 'imageUrl TEXT');
+
+    await _addColumnIfMissing(db, 'mood_entries', 'userId', "userId TEXT DEFAULT ''");
+    await _addColumnIfMissing(db, 'mood_entries', 'timestamp', 'timestamp TEXT');
+    await _addColumnIfMissing(db, 'mood_entries', 'updatedAt', 'updatedAt TEXT');
+    await _addColumnIfMissing(
+      db,
+      'mood_entries',
+      'isSynced',
+      'isSynced INTEGER NOT NULL DEFAULT 0',
+    );
+    await _addColumnIfMissing(db, 'mood_entries', 'date', 'date TEXT');
+    await db.execute('''
+      UPDATE mood_entries
+      SET date = COALESCE(date, substr(timestamp, 1, 10)),
+          timestamp = COALESCE(timestamp, date),
+          updatedAt = COALESCE(updatedAt, timestamp, date)
+      WHERE date IS NULL OR timestamp IS NULL OR updatedAt IS NULL
+    ''');
+
+    await _addColumnIfMissing(db, 'medical_records', 'notes', 'notes TEXT');
+    await _addColumnIfMissing(
+      db,
+      'medical_records',
+      'isTaken',
+      'isTaken INTEGER NOT NULL DEFAULT 0',
+    );
+    await _addColumnIfMissing(db, 'medical_records', 'createdAt', 'createdAt TEXT');
+    await db.execute('''
+      UPDATE medical_records
+      SET createdAt = COALESCE(createdAt, updatedAt, startDate)
+      WHERE createdAt IS NULL OR createdAt = ''
+    ''');
+  }
+
+  static Future<void> _createMergedTablesIfMissing(Database db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS nutrition_plans (
+        id TEXT PRIMARY KEY,
+        userId TEXT NOT NULL,
+        date TEXT NOT NULL,
+        totalCalories INTEGER NOT NULL DEFAULT 0,
+        totalProtein REAL NOT NULL DEFAULT 0,
+        totalCarbs REAL NOT NULL DEFAULT 0,
+        totalFats REAL NOT NULL DEFAULT 0,
+        updatedAt TEXT NOT NULL,
+        isSynced INTEGER NOT NULL DEFAULT 0
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS food_items (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        calories REAL NOT NULL,
+        meal_type TEXT NOT NULL,
+        date TEXT NOT NULL
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS daily_goals (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        target_calories REAL NOT NULL DEFAULT 2000
+      )
+    ''');
+
+    final goals = await db.query('daily_goals', limit: 1);
+    if (goals.isEmpty) {
+      await db.insert('daily_goals', {'target_calories': 2000});
+    }
+
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS mood_entries (
+        id TEXT PRIMARY KEY,
+        userId TEXT DEFAULT '',
+        mood TEXT NOT NULL,
+        note TEXT,
+        date TEXT NOT NULL,
+        timestamp TEXT,
+        updatedAt TEXT,
+        isSynced INTEGER NOT NULL DEFAULT 0
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS daily_moods (
+        id TEXT PRIMARY KEY,
+        date TEXT NOT NULL UNIQUE,
+        mood TEXT NOT NULL
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS mental_exercises (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        type TEXT NOT NULL CHECK(type IN ('breathing','meditation')),
+        duration_seconds INTEGER NOT NULL,
+        description TEXT
+      )
+    ''');
+
+    final mentalExercises = await db.query('mental_exercises', limit: 1);
+    if (mentalExercises.isEmpty) {
+      await _seedExercises(db);
+    }
+
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS medical_records (
+        id TEXT PRIMARY KEY,
+        userId TEXT NOT NULL,
+        name TEXT NOT NULL,
+        type TEXT NOT NULL DEFAULT 'pill',
+        dosage TEXT NOT NULL DEFAULT '',
+        frequency TEXT NOT NULL DEFAULT 'once_daily',
+        scheduleTimes TEXT NOT NULL DEFAULT '',
+        startDate TEXT NOT NULL,
+        endDate TEXT,
+        notes TEXT,
+        isTaken INTEGER NOT NULL DEFAULT 0,
+        createdAt TEXT,
+        updatedAt TEXT NOT NULL,
+        isSynced INTEGER NOT NULL DEFAULT 0
+      )
+    ''');
+  }
+
+  static Future<void> _addColumnIfMissing(
+    Database db,
+    String table,
+    String column,
+    String definition,
+  ) async {
+    final columns = await db.rawQuery('PRAGMA table_info($table)');
+    final exists = columns.any((row) => row['name'] == column);
+    if (!exists) {
+      await db.execute('ALTER TABLE $table ADD COLUMN $definition');
+    }
+  }
+
+  Future<void> insertUserIfNotExists(Map<String, dynamic> userData) async {
+    final db = await database;
+    final uid = (userData['uid'] ?? userData['id'] ?? '').toString();
+    final email = (userData['email'] ?? '').toString();
+    final existing = await db.query(
+      'users',
+      where: uid.isNotEmpty ? 'uid = ?' : 'email = ?',
+      whereArgs: [uid.isNotEmpty ? uid : email],
+      limit: 1,
+    );
+
+    if (existing.isNotEmpty) return;
+
+    final now = DateTime.now().toIso8601String();
+    await db.insert('users', {
+      'id': (userData['id'] ?? uid).toString().isNotEmpty
+          ? (userData['id'] ?? uid).toString()
+          : email,
+      'uid': uid,
+      'name': (userData['name'] ?? '').toString(),
+      'email': email,
+      'profileImageUrl': userData['profileImageUrl'],
+      'age': _toInt(userData['age']),
+      'weight': _toDouble(userData['weight']),
+      'height': _toDouble(userData['height']),
+      'caloriesGoal': _toInt(userData['caloriesGoal']) ?? 2000,
+      'waterGoal': _toInt(userData['waterGoal']) ?? 2500,
+      'createdAt': (userData['createdAt'] ?? now).toString(),
+      'updatedAt': (userData['updatedAt'] ?? now).toString(),
+      'isSynced': userData['isSynced'] == true || userData['isSynced'] == 1
+          ? 1
+          : 0,
+    });
+  }
+
+  Future<List<Map<String, dynamic>>> getUsers() async {
+    final db = await database;
+    return db.query('users', orderBy: 'createdAt DESC');
+  }
+
+  Future<int> updateUser(Map<String, dynamic> userData, Object? userId) async {
+    final db = await database;
+    final now = DateTime.now().toIso8601String();
+
+    return db.update(
+      'users',
+      {
+        if (userData.containsKey('uid')) 'uid': userData['uid'].toString(),
+        if (userData.containsKey('name')) 'name': userData['name'].toString(),
+        if (userData.containsKey('email')) 'email': userData['email'].toString(),
+        if (userData.containsKey('profileImageUrl'))
+          'profileImageUrl': userData['profileImageUrl'],
+        if (userData.containsKey('age')) 'age': _toInt(userData['age']),
+        if (userData.containsKey('weight'))
+          'weight': _toDouble(userData['weight']),
+        if (userData.containsKey('height'))
+          'height': _toDouble(userData['height']),
+        if (userData.containsKey('caloriesGoal'))
+          'caloriesGoal': _toInt(userData['caloriesGoal']) ?? 2000,
+        if (userData.containsKey('waterGoal'))
+          'waterGoal': _toInt(userData['waterGoal']) ?? 2500,
+        'updatedAt': now,
+        'isSynced': userData['isSynced'] == true || userData['isSynced'] == 1
+            ? 1
+            : 0,
+      },
+      where: 'id = ?',
+      whereArgs: [userId.toString()],
+    );
+  }
+
+  static int? _toInt(dynamic value) {
+    if (value == null) return null;
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    return int.tryParse(value.toString());
+  }
+
+  static double? _toDouble(dynamic value) {
+    if (value == null) return null;
+    if (value is double) return value;
+    if (value is num) return value.toDouble();
+    return double.tryParse(value.toString());
   }
 
   // ----------------------------------------------------------
@@ -79,7 +313,7 @@ class DatabaseHelper {
   // Order matters: parent tables before child tables that
   // reference them (though SQLite does not enforce FKs by default).
   // ----------------------------------------------------------
-  Future<void> _onCreate(Database db, int version) async {
+  static Future<void> _onCreate(Database db, int version) async {
 
     // ── TABLE 1: users ──────────────────────────────────────
     // Stores the logged-in user's account and profile data.
@@ -138,6 +372,7 @@ class DatabaseHelper {
         difficulty TEXT NOT NULL DEFAULT 'beginner',
         durationMinutes INTEGER NOT NULL DEFAULT 30,
         isPredefined INTEGER NOT NULL DEFAULT 0,
+        imageUrl TEXT,
         createdAt TEXT NOT NULL,
         updatedAt TEXT NOT NULL,
         isSynced INTEGER NOT NULL DEFAULT 0
@@ -223,6 +458,30 @@ class DatabaseHelper {
       )
     ''');
 
+    await db.execute('''
+      CREATE TABLE food_items (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        calories REAL NOT NULL,
+        meal_type TEXT NOT NULL,
+        date TEXT NOT NULL
+      
+      )
+    ''');
+
+    // Daily goals table
+    await db.execute('''
+      CREATE TABLE daily_goals (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        target_calories REAL NOT NULL DEFAULT 2000
+
+      )
+    ''');
+
+    // Insert default goal
+    await db.insert('daily_goals', {
+      'target_calories': 2000,
+    });
     // ── TABLE 8: nutrition_meals ────────────────────────────
     // Individual food entries inside a nutrition plan.
     // planId → nutrition_plans.id
@@ -267,14 +526,37 @@ class DatabaseHelper {
     await db.execute('''
       CREATE TABLE mood_entries (
         id TEXT PRIMARY KEY,
-        userId TEXT NOT NULL,
+        userId TEXT DEFAULT '',
         mood TEXT NOT NULL,
         note TEXT,
-        timestamp TEXT NOT NULL,
-        updatedAt TEXT NOT NULL,
+        date TEXT NOT NULL,
+        timestamp TEXT,
+        updatedAt TEXT,
         isSynced INTEGER NOT NULL DEFAULT 0
       )
     ''');
+
+
+    await db.execute('''
+      CREATE TABLE daily_moods (
+        id         TEXT PRIMARY KEY,
+        date       TEXT NOT NULL UNIQUE,                   
+        mood       TEXT NOT NULL
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE mental_exercises (
+        id               TEXT PRIMARY KEY,
+        name             TEXT NOT NULL,
+        type             TEXT NOT NULL CHECK(type IN ('breathing','meditation')),
+        duration_seconds INTEGER NOT NULL,
+        description      TEXT
+      )
+    ''');
+
+
+    await _seedExercises(db);
 
     // ── TABLE 11: medical_records ───────────────────────────
     // One row per medication the user tracks.
@@ -291,6 +573,9 @@ class DatabaseHelper {
         scheduleTimes TEXT NOT NULL DEFAULT '',
         startDate TEXT NOT NULL,
         endDate TEXT,
+        notes TEXT,
+        isTaken INTEGER NOT NULL DEFAULT 0,
+        createdAt TEXT NOT NULL,
         updatedAt TEXT NOT NULL,
         isSynced INTEGER NOT NULL DEFAULT 0
       )
@@ -314,5 +599,42 @@ class DatabaseHelper {
         isSynced INTEGER NOT NULL DEFAULT 0
       )
     ''');
+  }
+
+  static Future<void> _seedExercises(Database db) async {
+    final exercises = [
+      {
+        'id': 'ex_001',
+        'name': 'Box Breathing',
+        'type': 'breathing', 
+        'duration_seconds': 240,
+        'description': 'استنشق 4 ثواني، احبس 4، اخرج 4، احبس 4',
+      },
+      {
+        'id': 'ex_002',
+        'name': '4-7-8 Breathing',
+        'type': 'breathing',
+        'duration_seconds': 180,
+        'description': 'استنشق 4، احبس 7، اخرج 8 ثواني',
+      },
+      {
+        'id': 'ex_003',
+        'name': 'Body Scan Meditation',
+        'type': 'meditation',
+        'duration_seconds': 600,
+        'description': 'ركز على كل جزء من جسمك من القدم للرأس',
+      },
+      {
+        'id': 'ex_004',
+        'name': 'Mindfulness Meditation',
+        'type': 'meditation',
+        'duration_seconds': 300,
+        'description': 'ركز على اللحظة الحالية بدون حكم',
+      },
+    ];
+ 
+    for (final ex in exercises) {
+      await db.insert('mental_exercises', ex);
+    }
   }
 }

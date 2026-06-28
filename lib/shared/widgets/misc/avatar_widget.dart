@@ -25,7 +25,7 @@
 // ============================================================
 
 import 'package:flutter/material.dart';
-import '../../../../core/constants/app_colors.dart';
+import 'package:sparksteel/core/constants/app_colors.dart';
 
 class AvatarWidget extends StatelessWidget {
   final String name;

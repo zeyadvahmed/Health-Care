@@ -38,7 +38,7 @@ class WorkoutCubit
   }
 
   Future<void> deleteWorkout(
-    int id,
+    String id,
   ) async {
 
     await workoutService
@@ -71,7 +71,7 @@ class WorkoutCubit
     final filteredWorkouts =
         allWorkouts.where((workout) {
 
-      return workout.title
+      return workout.name
           .toLowerCase()
           .contains(
             query.toLowerCase(),

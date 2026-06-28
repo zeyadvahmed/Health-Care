@@ -29,19 +29,19 @@ class EditWorkoutScreen
   late final TextEditingController
       titleController =
       TextEditingController(
-    text: workout.title,
+    text: workout.name,
   );
 
   late final TextEditingController
       durationController =
       TextEditingController(
-    text: workout.duration,
+    text: workout.durationMinutes.toString(),
   );
 
   late final TextEditingController
       caloriesController =
       TextEditingController(
-    text: workout.calories,
+    text: workout.description ?? '',
   );
 
   @override
@@ -135,18 +135,19 @@ class EditWorkoutScreen
               }
 
               final updatedWorkout =
-                  WorkoutModel(
-
-                id: workout.id,
-
-                title:
+                  workout.copyWith(
+                name:
                     titleController.text,
 
-                duration:
-                    durationController.text,
-
-                calories:
+                description:
                     caloriesController.text,
+
+                durationMinutes:
+                    int.tryParse(durationController.text) ??
+                        workout.durationMinutes,
+
+                updatedAt:
+                    DateTime.now(),
               );
 
               await context

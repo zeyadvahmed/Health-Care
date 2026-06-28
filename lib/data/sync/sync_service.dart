@@ -3,7 +3,7 @@
 // lib/data/sync/sync_service.dart
 //
 // PURPOSE:
-//   Bridge between SQLite and Firestore. Two directions:
+//   Bridge between SQLite and Firestore.
 //
 //   PUSH (syncAll):
 //     Finds all rows where isSynced=0 and pushes them up.
@@ -32,6 +32,12 @@
 //   Every feature is wrapped in its own try/catch.
 //   One failure never blocks the others from syncing.
 //
+// NOTE — _syncActivity is INTENTIONALLY OMITTED:
+//   local_activity_service.dart and remote_activity_service.dart
+//   have no implemented methods yet. Importing them causes
+//   compile errors. Uncomment the import and _syncActivity()
+//   call in syncAll() once both services are implemented.
+//
 // RULES:
 //   - Singleton pattern
 //   - Always check isOnline() before syncAll
@@ -39,10 +45,22 @@
 //   - No Flutter UI imports
 // ============================================================
 
+import '../local/local_activity_service.dart';
 import '../local/local_exercise_service.dart';
+import '../local/local_hydration_service.dart';
+import '../local/local_medical_service.dart';
+import '../local/local_mood_service.dart';
+import '../local/local_nutrition_service.dart';
 import '../local/local_workout_service.dart';
 import '../local/local_session_service.dart';
+import '../local/local_activity_service.dart';
+
+import '../local/local_activity_service.dart';
 import '../remote/remote_exercise_service.dart';
+import '../remote/remote_hydration_service.dart';
+import '../remote/remote_medical_service.dart';
+import '../remote/remote_mood_service.dart';
+import '../remote/remote_nutrition_service.dart';
 import '../remote/remote_workout_service.dart';
 import 'connectivity_service.dart';
 
@@ -60,18 +78,18 @@ class SyncService {
   // ----------------------------------------------------------
   // syncAll()
   // Master push method. Finds all isSynced=0 rows across all
-  // workout/exercise/session tables and pushes them to Firestore.
+  // workout/exercise/session tables and pushes to Firestore.
   //
   // ORDER MATTERS:
-  //   workouts must exist in Firestore before workout_exercises
-  //   sessions must exist before session_logs
-  //   So push parent records before child records.
+  //   workouts must exist in Firestore before workout_exercises.
+  //   sessions must exist before session_logs.
+  //   Push parent records before child records.
   //
   // uid = Firebase Auth UID, needed for subcollection paths.
   // ----------------------------------------------------------
   Future<void> syncAll(String uid) async {
-    // Check connectivity first — abort silently if offline.
-    // Records stay isSynced=0 and will push when reconnected.
+    // Check connectivity — abort silently if offline.
+    // Records stay isSynced=0 and push when reconnected.
     final online = await ConnectivityService.instance.isOnline();
     if (!online) return;
 
@@ -109,7 +127,31 @@ class SyncService {
     }
 
     try {
-      await _syncActivity();
+      await _syncNutrition(uid);
+    } catch (e) {
+      print('SyncService._syncNutrition failed: $e');
+    }
+
+    try {
+      await _syncMood(uid);
+    } catch (e) {
+      print('SyncService._syncMood failed: $e');
+    }
+
+    try {
+      await _syncHydration(uid);
+    } catch (e) {
+      print('SyncService._syncHydration failed: $e');
+    }
+
+    try {
+      await _syncMedical(uid);
+    } catch (e) {
+      print('SyncService._syncMedical failed: $e');
+    }
+
+    try {
+      await _syncActivity(uid);
     } catch (e) {
       print('SyncService._syncActivity failed: $e');
     }
@@ -118,9 +160,9 @@ class SyncService {
   // ----------------------------------------------------------
   // _syncExercises()
   // Pushes unsynced exercises to Firestore ROOT collection.
-  // Rare in practice — exercises come FROM Firestore, not from
-  // the user. This handles the edge case where a row has
-  // isSynced=0 after seeding.
+  // Rare in practice — exercises come FROM Firestore via seeding.
+  // This handles the edge case where a row has isSynced=0
+  // after the initial seed.
   // ----------------------------------------------------------
   Future<void> _syncExercises() async {
     final unsynced = await LocalExerciseService.instance.getUnsyncedExercises();
@@ -165,8 +207,7 @@ class SyncService {
   Future<void> _syncSessions(String uid) async {
     final unsynced = await LocalSessionService.instance.getUnsyncedSessions();
     for (final session in unsynced) {
-      // Skip active sessions — only push completed ones
-      if (session.endTime == null) continue;
+      if (session.endTime == null) continue; // never push active sessions
       await RemoteWorkoutService.instance.pushSession(session, uid);
       await LocalSessionService.instance.markSessionSynced(session.id);
     }
@@ -184,7 +225,78 @@ class SyncService {
     }
   }
 
+  // ----------------------------------------------------------
+  // _syncActivity()
+  // STUB — intentionally not implemented yet.
+  // LocalActivityService and RemoteActivityService have no
+  // methods. Uncomment imports above and restore this method
+  // once both services are implemented:
+  //
+  // Future<void> _syncActivity() async {
+  //   final unsynced =
+  //       await LocalActivityService.instance.getUnsyncedActivity();
+  //   for (final activity in unsynced) {
+  //     await RemoteActivityService.instance.pushActivity(activity);
+  //     await LocalActivityService.instance.markActivitySynced(activity.id);
+  //   }
+  // }
+  // ----------------------------------------------------------
+
   // ═══════════════════════════════════════════════════════════
+  // ----------------------------------------------------------
+  // _syncNutrition()
+  // Nutrition tables do not have isSynced columns yet, so this
+  // pushes the current local snapshot to Firestore.
+  // ----------------------------------------------------------
+  Future<void> _syncNutrition(String uid) async {
+    final localNutrition = LocalNutritionService();
+    final foodItems = await localNutrition.getAllFoodItems();
+    final dailyGoal = await localNutrition.getDailyGoal();
+
+    await RemoteNutritionService.instance.pushAllFoodItems(uid, foodItems);
+    await RemoteNutritionService.instance.updateDailyGoal(uid, dailyGoal);
+  }
+
+  // ----------------------------------------------------------
+  // _syncMood()
+  // Mood tables do not have isSynced columns yet, so this
+  // pushes the current local snapshot to Firestore.
+  // ----------------------------------------------------------
+  Future<void> _syncMood(String uid) async {
+    final localMood = LocalMoodService();
+    final entries = await localMood.getAllMoodEntries();
+    final dailyMoods = await localMood.getAllDailyMoods();
+
+    await RemoteMoodService.instance.pushAllMoodEntries(uid, entries);
+    await RemoteMoodService.instance.pushAllDailyMoods(uid, dailyMoods);
+  }
+
+  Future<void> _syncHydration(String uid) async {
+    final unsynced = await LocalHydrationService.instance.getUnsyncedEntries();
+    for (final entry in unsynced) {
+      await RemoteHydrationService.instance.pushEntry(entry, uid);
+      await LocalHydrationService.instance.markEntrySynced(entry.id);
+    }
+  }
+
+  Future<void> _syncMedical(String uid) async {
+    final unsynced =
+        await LocalMedicalService.instance.getUnsyncedMedicalRecords();
+    for (final record in unsynced) {
+      await RemoteMedicalService.instance.pushMedicalRecord(record, uid);
+      await LocalMedicalService.instance.markMedicalRecordSynced(record.id);
+    }
+  }
+
+  Future<void> _syncActivity(String uid) async {
+    final unsynced =
+        await LocalActivityService.instance.getUnsyncedActivity();
+    for (final activity in unsynced) {
+      await RemoteActivityService.instance.pushActivity(uid, activity);
+      await LocalActivityService.instance.markActivitySynced(activity.id);
+    }
+  }
+
   // PULL — Firestore → SQLite (restore on fresh install)
   // ═══════════════════════════════════════════════════════════
 
@@ -192,26 +304,19 @@ class SyncService {
   // restoreFromFirestore()
   // Pulls ALL user workout data from Firestore into SQLite.
   // Called by auth_controller.login() ONLY when local data
-  // is empty — meaning this is a fresh install or the local
-  // database was cleared.
+  // is empty — meaning fresh install or cleared database.
   //
   // STRATEGY — Firestore wins:
-  //   We clear any partial local data first, then insert
-  //   everything fresh from Firestore. Simple and safe.
-  //   The alternative (merge by updatedAt) is complex and
-  //   unnecessary for this app's use case.
+  //   Insert everything fresh from Firestore.
+  //   ConflictAlgorithm.replace in insert methods handles
+  //   any partial local data safely.
   //
-  // ORDER:
-  //   1. exercises — seeded globally, not per-user
-  //   2. workouts  — parent of workout_exercises
+  // ORDER (parent tables before child tables):
+  //   1. exercises       — global, not per-user
+  //   2. workouts        — parent of workout_exercises
   //   3. workout_exercises — child of workouts
-  //   4. sessions  — completed workout records
-  //   5. session_logs — set-by-set breakdown per session
-  //
-  //   Parent tables must be restored before child tables
-  //   to maintain referential integrity.
-  //
-  // Each step is independent — one failure doesn't block others.
+  //   4. sessions        — completed workout records
+  //   5. session_logs    — set-by-set breakdown per session
   //
   // userId = app's internal user UUID (stored in users table)
   // uid    = Firebase Auth UID (used for subcollection paths)
@@ -220,15 +325,10 @@ class SyncService {
     required String userId,
     required String uid,
   }) async {
-    // Must be online to restore from Firestore
     final online = await ConnectivityService.instance.isOnline();
     if (!online) return;
 
     // ── Step 1: Exercises ─────────────────────────────────
-    // Pull all 873 exercises from the global exercises collection.
-    // These are the same for every user — seeded once globally.
-    // If already seeded, insertAllExercises uses
-    // ConflictAlgorithm.replace so duplicates are safe.
     try {
       final exercises = await RemoteExerciseService.instance
           .fetchAllExercises();
@@ -240,14 +340,11 @@ class SyncService {
     }
 
     // ── Step 2: Workouts ──────────────────────────────────
-    // Pull all workouts the user has created.
-    // Filters by userId field inside each Firestore document.
     try {
       final workouts = await RemoteWorkoutService.instance.fetchWorkoutsForUser(
         userId,
       );
       for (final workout in workouts) {
-        // Mark as synced — it just came FROM Firestore
         await LocalWorkoutService.instance.insertWorkout(
           workout.copyWith(isSynced: true),
         );
@@ -257,8 +354,6 @@ class SyncService {
     }
 
     // ── Step 3: Workout Exercises ─────────────────────────
-    // Pull all exercises linked to the user's workouts.
-    // Uses the uid subcollection path (not userId filter).
     try {
       final workoutExercises = await RemoteWorkoutService.instance
           .fetchWorkoutExercisesForUser(uid);
@@ -272,9 +367,6 @@ class SyncService {
     }
 
     // ── Step 4: Sessions ──────────────────────────────────
-    // Pull all completed workout sessions.
-    // Active sessions are never in Firestore so all fetched
-    // sessions are guaranteed to have endTime set.
     try {
       final sessions = await RemoteWorkoutService.instance.fetchSessionsForUser(
         uid,
@@ -289,9 +381,6 @@ class SyncService {
     }
 
     // ── Step 5: Session Logs ──────────────────────────────
-    // Pull all set logs for all sessions.
-    // This can be a large number of documents if the user
-    // has a long workout history — called only once.
     try {
       final logs = await RemoteWorkoutService.instance.fetchLogsForUser(uid);
       for (final log in logs) {
@@ -301,6 +390,79 @@ class SyncService {
       }
     } catch (e) {
       print('restoreFromFirestore: session_logs failed → $e');
+    }
+
+    // ── Step 6: Nutrition ─────────────────────────────────
+    // Pull all food items and the daily calorie goal for the user.
+    try {
+      final localNutrition = LocalNutritionService();
+      final foodItems = await RemoteNutritionService.instance.getAllFoodItems(
+        uid,
+      );
+      await localNutrition.clear();
+      for (final item in foodItems) {
+        await localNutrition.insertFoodItem(item);
+      }
+
+      final dailyGoal = await RemoteNutritionService.instance.getDailyGoal(uid);
+      await localNutrition.updateDailyGoal(dailyGoal);
+    } catch (e) {
+      print('restoreFromFirestore: nutrition failed → $e');
+    }
+
+    // ── Step 7: Mood ──────────────────────────────────────
+    // Pull all mood entries and daily mood summaries for the user.
+    try {
+      final localMood = LocalMoodService();
+      final entries = await RemoteMoodService.instance.getAllMoodEntries(uid);
+      final dailyMoods = await RemoteMoodService.instance.getAllDailyMoods(uid);
+
+      await localMood.clearMoodData();
+      for (final mood in dailyMoods) {
+        await localMood.upsertDailyMood(mood);
+      }
+      for (final entry in entries) {
+        await localMood.insertMoodEntry(entry);
+      }
+    } catch (e) {
+      print('restoreFromFirestore: mood failed → $e');
+    }
+
+    try {
+      final entries =
+          await RemoteHydrationService.instance.fetchEntriesForUser(uid);
+      for (final entry in entries) {
+        await LocalHydrationService.instance.insertEntry(
+          entry.copyWith(isSynced: true),
+        );
+      }
+    } catch (e) {
+      print('restoreFromFirestore: hydration failed -> $e');
+    }
+
+    try {
+      final records =
+          await RemoteMedicalService.instance.fetchMedicalRecordsForUser(uid);
+      for (final record in records) {
+        await LocalMedicalService.instance.insertMedicalRecord(
+          record.copyWith(isSynced: true),
+        );
+      }
+    } catch (e) {
+      print('restoreFromFirestore: medical failed -> $e');
+    }
+
+    try {
+      final activities = await RemoteActivityService.instance.fetchActivities(
+        uid,
+      );
+      for (final activity in activities) {
+        await LocalActivityService.instance.insertActivity(
+          activity.copyWith(isSynced: true),
+        );
+      }
+    } catch (e) {
+      print('restoreFromFirestore: activity failed -> $e');
     }
   }
 }

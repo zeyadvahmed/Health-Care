@@ -6,17 +6,22 @@
 //   All SQLite CRUD for the workouts and workout_exercises tables.
 //
 // TWO TABLES MANAGED HERE:
-//   workouts          → workout templates (the plan itself)
+//   workouts          → workout templates (predefined + user-created)
 //   workout_exercises → exercises inside each workout with
 //                       sets/reps/weight/rest/order settings
+//
+// getAllWorkouts() RETURNS BOTH:
+//   - isPredefined = 1 → seeded workouts (same for every user)
+//   - isPredefined = 0 AND userId = ? → user-created workouts
+//   Using WHERE userId = ? ALONE would miss all predefined workouts
+//   and the predefined section would always be empty.
 //
 // IMPORTANT ORDER RULE:
 //   getExercisesForWorkout() MUST order by orderIndex ASC.
 //   Without this, exercises display in random insertion order.
 //
 // DELETE ORDER:
-//   Always delete workout_exercises BEFORE deleting the workout.
-//   Call deleteExercisesForWorkout(workoutId) first, then
+//   Always call deleteExercisesForWorkout(workoutId) BEFORE
 //   deleteWorkout(id). This avoids orphaned exercise rows.
 //
 // RULES:
@@ -45,9 +50,10 @@ class LocalWorkoutService {
 
   // ----------------------------------------------------------
   // insertWorkout()
-  // Inserts a new workout row. ConflictAlgorithm.replace
-  // means editing an existing workout with the same id will
-  // update it instead of throwing an error.
+  // Inserts or replaces a workout row.
+  // ConflictAlgorithm.replace handles both CREATE and EDIT:
+  //   - New workout → inserts fresh row
+  //   - Edited workout with same id → replaces existing row
   // ----------------------------------------------------------
   Future<void> insertWorkout(WorkoutModel workout) async {
     final db = await DatabaseHelper.instance.database;
@@ -60,16 +66,29 @@ class LocalWorkoutService {
 
   // ----------------------------------------------------------
   // getAllWorkouts()
-  // Returns all workouts for a specific user.
-  // Ordered by createdAt DESC → newest workouts first in list.
+  // Returns BOTH predefined workouts AND user-created workouts.
+  //
+  // WHY THE OR CLAUSE:
+  //   Predefined workouts are seeded with a system userId (not
+  //   the current user's id). Using WHERE userId = ? alone
+  //   would never return predefined workouts — the predefined
+  //   section in WorkoutsListScreen would always be empty.
+  //
+  // ORDER:
+  //   isPredefined DESC → predefined workouts appear first
+  //   createdAt DESC    → newest user workouts appear at top
+  //
+  // WorkoutsListScreen then splits into two lists:
+  //   predefined = workouts.where((w) => w.isPredefined)
+  //   mine       = workouts.where((w) => !w.isPredefined)
   // ----------------------------------------------------------
   Future<List<WorkoutModel>> getAllWorkouts(String userId) async {
     final db = await DatabaseHelper.instance.database;
     final maps = await db.query(
       'workouts',
-      where: 'userId = ?',
+      where: 'userId = ? OR isPredefined = 1',
       whereArgs: [userId],
-      orderBy: 'createdAt DESC',
+      orderBy: 'isPredefined DESC, createdAt DESC',
     );
     return maps.map((map) => WorkoutModel.fromMap(map)).toList();
   }
@@ -92,8 +111,7 @@ class LocalWorkoutService {
 
   // ----------------------------------------------------------
   // updateWorkout()
-  // Updates all fields of an existing workout row.
-  // Uses the workout's id to find the right row.
+  // Updates all fields of an existing workout row by id.
   // ----------------------------------------------------------
   Future<void> updateWorkout(WorkoutModel workout) async {
     final db = await DatabaseHelper.instance.database;
@@ -108,8 +126,8 @@ class LocalWorkoutService {
   // ----------------------------------------------------------
   // deleteWorkout()
   // Deletes a workout row by id.
-  // WARNING: Always call deleteExercisesForWorkout() first
-  // to avoid leaving orphaned workout_exercise rows behind.
+  // WARNING: Always call deleteExercisesForWorkout() FIRST to
+  // avoid leaving orphaned workout_exercise rows behind.
   // ----------------------------------------------------------
   Future<void> deleteWorkout(String id) async {
     final db = await DatabaseHelper.instance.database;
@@ -180,7 +198,7 @@ class LocalWorkoutService {
       'workout_exercises',
       where: 'workoutId = ?',
       whereArgs: [workoutId],
-      orderBy: 'orderIndex ASC', // CRITICAL: preserves exercise order
+      orderBy: 'orderIndex ASC',
     );
     return maps.map((map) => WorkoutExerciseModel.fromMap(map)).toList();
   }
@@ -203,7 +221,6 @@ class LocalWorkoutService {
   // ----------------------------------------------------------
   // deleteWorkoutExercise()
   // Deletes a single exercise from a workout by its row id.
-  // Used when user removes one exercise from a workout.
   // ----------------------------------------------------------
   Future<void> deleteWorkoutExercise(String id) async {
     final db = await DatabaseHelper.instance.database;
@@ -217,8 +234,14 @@ class LocalWorkoutService {
   // ----------------------------------------------------------
   // deleteExercisesForWorkout()
   // Deletes ALL exercise rows for a given workoutId.
-  // ALWAYS call this before deleteWorkout() to avoid leaving
-  // orphaned rows in workout_exercises table.
+  //
+  // Called in TWO situations:
+  //   1. Before deleteWorkout() — cleans up child rows first
+  //   2. Before re-inserting in saveWorkout() edit mode —
+  //      removes exercises the user deleted from the list
+  //
+  // Without this, removed exercises stay as orphan rows and
+  // appear again the next time the workout is opened.
   // ----------------------------------------------------------
   Future<void> deleteExercisesForWorkout(String workoutId) async {
     final db = await DatabaseHelper.instance.database;

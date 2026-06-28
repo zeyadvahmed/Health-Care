@@ -1,28 +1,109 @@
 // ============================================================
 // local_activity_service.dart
 // All SQLite read/write operations for the activity table.
-// Stores XP and level data for the user.
-//
-// Usage:
-//   await LocalActivityService.instance.insertActivity(activity);
-//   final activity = await LocalActivityService.instance.getActivityForUser(userId);
-//   await LocalActivityService.instance.updateActivity(activity);
-//
-// Methods to implement:
-//   insertActivity(ActivityModel)                — insert first activity row for user
-//   getActivityForUser(String userId)            — return activity record for user
-//                                                  returns null if never completed a workout
-//   updateActivity(ActivityModel)                — update XP and level after workout
-//   getUnsyncedActivity()                        — WHERE isSynced = 0
-//   markActivitySynced(String id)                — UPDATE isSynced = 1
-//
-// XP logic (handled in workout_controller, not here):
-//   +100 XP per completed workout session
-//   currentLevel  = totalXp ~/ 500
-//   xpToNextLevel = ((currentLevel + 1) * 500) - totalXp
-//
-// Rules:
-//   - Always get db via DatabaseHelper.instance.database
-//   - One row per user — insertActivity only called once per user ever
-//   - No Flutter imports — pure Dart + sqflite only
 // ============================================================
+
+import 'package:sqflite/sqflite.dart';
+
+import '../models/activity_model.dart';
+import 'database_helper.dart';
+
+class LocalActivityService {
+  LocalActivityService._internal();
+  static final LocalActivityService instance =
+      LocalActivityService._internal();
+
+  static const String _table = 'activity';
+
+  Future<void> insertActivity(ActivityModel activity) async {
+    final db = await DatabaseHelper.instance.database;
+    await db.insert(
+      _table,
+      activity.toMap(),
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  Future<ActivityModel?> getActivityForUser(String userId) async {
+    final db = await DatabaseHelper.instance.database;
+    final rows = await db.query(
+      _table,
+      where: 'userId = ?',
+      whereArgs: [userId],
+      limit: 1,
+    );
+    if (rows.isEmpty) return null;
+    return ActivityModel.fromMap(rows.first);
+  }
+
+  Future<ActivityModel?> getActivityByUserId(String userId) {
+    return getActivityForUser(userId);
+  }
+
+  Future<void> updateActivity(ActivityModel activity) async {
+    final db = await DatabaseHelper.instance.database;
+    await db.update(
+      _table,
+      activity.toMap(),
+      where: 'id = ?',
+      whereArgs: [activity.id],
+    );
+  }
+
+  Future<List<ActivityModel>> getUnsyncedActivity() async {
+    final db = await DatabaseHelper.instance.database;
+    final rows = await db.query(
+      _table,
+      where: 'isSynced = ?',
+      whereArgs: [0],
+    );
+    return rows.map((row) => ActivityModel.fromMap(row)).toList();
+  }
+
+  Future<List<ActivityModel>> getUnsyncedActivities() {
+    return getUnsyncedActivity();
+  }
+
+  Future<void> markActivitySynced(String id) async {
+    final db = await DatabaseHelper.instance.database;
+    await db.update(
+      _table,
+      {'isSynced': 1},
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+
+  Future<void> deleteActivity(String id) async {
+    final db = await DatabaseHelper.instance.database;
+    await db.delete(
+      _table,
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+
+  Future<bool> activityExists(String userId) async {
+    final db = await DatabaseHelper.instance.database;
+    final result = await db.rawQuery(
+      'SELECT COUNT(*) FROM $_table WHERE userId = ?',
+      [userId],
+    );
+    return (Sqflite.firstIntValue(result) ?? 0) > 0;
+  }
+
+  Future<int> getTotalXp(String userId) async {
+    final activity = await getActivityForUser(userId);
+    return activity?.totalXp ?? 0;
+  }
+
+  Future<int> getCurrentLevel(String userId) async {
+    final activity = await getActivityForUser(userId);
+    return activity?.currentLevel ?? 0;
+  }
+
+  Future<int> getXpToNextLevel(String userId) async {
+    final activity = await getActivityForUser(userId);
+    return activity?.xpToNextLevel ?? 500;
+  }
+}

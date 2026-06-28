@@ -20,7 +20,7 @@
 // ============================================================
 
 import 'package:flutter/material.dart';
-import '../../../../core/constants/app_colors.dart';
+import 'package:sparksteel/core/constants/app_colors.dart';
 
 class AppLogo extends StatelessWidget {
   final double size;

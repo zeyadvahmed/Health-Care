@@ -1,35 +1,25 @@
 // ============================================================
 // remote_medical_service.dart
-// Firestore push methods for medical records.
+// Firestore read/write operations for medical tracker data.
 //
-// Usage:
-//   await RemoteMedicalService.instance.pushRecord(record);
-//   await RemoteMedicalService.instance.deleteRecord(id);
-//
-// Methods to implement:
-//   pushRecord(MedicalRecordModel)   — write record to 'medical_records' collection
-//   deleteRecord(String id)          — delete record doc from Firestore
-//
-// Rules:
-//   - Called only by sync_service — never from controllers directly
-//   - Uses FirestoreService.instance as the base layer
-//   - No Flutter UI imports — pure Dart + cloud_firestore only
+// User medical records are stored under:
+//   User/{uid}/medical_records/{id}
 // ============================================================
 
-
-import '../models/medical_record_model.dart';
-import 'firestore_service.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:sparksteel/data/models/medical_record_model.dart';
+import 'package:sparksteel/data/remote/firestore_service.dart';
 
 class RemoteMedicalService {
-
-
   RemoteMedicalService._internal();
   static final RemoteMedicalService instance =
       RemoteMedicalService._internal();
 
+  final FirebaseFirestore _db = FirebaseFirestore.instance;
 
-  String _medicalRecordsPath(String uid) =>
-      'users/$uid/medical_records';
+  static const int _batchSize = 450;
+
+  String _medicalRecordsPath(String uid) => 'User/$uid/medical_records';
 
   Future<void> pushMedicalRecord(
     MedicalRecordModel record,
@@ -42,6 +32,38 @@ class RemoteMedicalService {
     );
   }
 
+  Future<void> pushAllMedicalRecords(
+    String uid,
+    List<MedicalRecordModel> records,
+  ) async {
+    final collection = _medicalRecordsPath(uid);
+    final snapshot = await _db.collection(collection).get();
+    final localIds = records.map((record) => record.id).toSet();
+
+    final operations = <Map<String, dynamic>>[];
+
+    for (final doc in snapshot.docs) {
+      if (!localIds.contains(doc.id)) {
+        operations.add({
+          'type': 'delete',
+          'collection': collection,
+          'docId': doc.id,
+        });
+      }
+    }
+
+    for (final record in records) {
+      operations.add({
+        'type': 'set',
+        'collection': collection,
+        'docId': record.id,
+        'data': record.toFirestore(),
+      });
+    }
+
+    await _batchWriteInChunks(operations);
+  }
+
   Future<void> deleteMedicalRecord(
     String id,
     String uid,
@@ -52,15 +74,55 @@ class RemoteMedicalService {
     );
   }
 
-
   Future<List<MedicalRecordModel>> fetchMedicalRecordsForUser(
     String uid,
   ) async {
     final docs = await FirestoreService.instance.getCollection(
       _medicalRecordsPath(uid),
     );
-    return docs
-        .map((doc) => MedicalRecordModel.fromFirestore(doc))
-        .toList();
+
+    final records = docs.map((doc) {
+      return MedicalRecordModel.fromFirestore(_normalizeRecordMap(doc));
+    }).toList();
+    records.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    return records;
+  }
+
+  Map<String, dynamic> _normalizeRecordMap(Map<String, dynamic> data) {
+    return {
+      'id': data['id'],
+      'userId': data['userId'],
+      'name': data['name'],
+      'type': data['type'] ?? 'pill',
+      'dosage': data['dosage'] ?? '',
+      'frequency': data['frequency'] ?? 'once_daily',
+      'scheduleTimes': List<String>.from(data['scheduleTimes'] ?? []),
+      'startDate': data['startDate'],
+      'endDate': data['endDate'],
+      'updatedAt': _timestampValue(data['updatedAt']),
+      'isTaken': data['isTaken'] ?? false,
+      'notes': data['notes'],
+      'createdAt': _timestampValue(data['createdAt']),
+    };
+  }
+
+  Timestamp _timestampValue(dynamic value) {
+    if (value is Timestamp) return value;
+    return Timestamp.fromDate(
+      DateTime.tryParse(value?.toString() ?? '') ?? DateTime.now(),
+    );
+  }
+
+  Future<void> _batchWriteInChunks(
+    List<Map<String, dynamic>> operations,
+  ) async {
+    if (operations.isEmpty) return;
+
+    for (var i = 0; i < operations.length; i += _batchSize) {
+      final end = i + _batchSize < operations.length
+          ? i + _batchSize
+          : operations.length;
+      await FirestoreService.instance.batchWrite(operations.sublist(i, end));
+    }
   }
 }

@@ -1,36 +1,12 @@
-// ============================================================
-// add_medication_screen.dart
-// Form for adding a new medication record.
-//
-// What to build:
-//   - CustomAppBar title: 'Add Medication' with back button
-//   - Medication name CustomTextField (validator: Validators.validateMedicationName)
-//   - Type dropdown: pill / injection / supplement / other
-//   - Dosage CustomTextField (validator: Validators.validateDosage)
-//   - Frequency chips: Once daily / Twice daily / Every X hours (single select)
-//   - Dynamic schedule times list with Add Time button
-//     each time opens a TimePickerDialog, adds to list
-//   - Start date picker → DatePicker dialog
-//   - End date picker → DatePicker dialog (optional)
-//   - Save CustomButton at bottom
-//     → medicalController.saveMedication(record)
-//     → Navigator.pop after save
-//
-// Rules:
-//   - StatefulWidget — chip selection, dynamic times list, date pickers
-//   - Validate form before saving
-//   - Background color: AppColors.background
-// ============================================================
-
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:uuid/uuid.dart';
-import '../../../../core/constants/app_colors.dart';
-import '../../../../core/constants/app_strings.dart';
-import '../../../../core/utils/validators.dart';
-import '../../../../data/models/medical_record_model.dart';
-import '../../../../shared/widgets/buttons/custom_button.dart';
-import '../../../../shared/widgets/inputs/custom_textfield.dart';
+import 'package:sparksteel/core/constants/app_colors.dart';
+import 'package:sparksteel/core/constants/app_strings.dart';
+import 'package:sparksteel/core/utils/validators.dart';
+import 'package:sparksteel/data/models/medical_record_model.dart';
+import 'package:sparksteel/shared/widgets/buttons/custom_button.dart';
+import 'package:sparksteel/shared/widgets/inputs/custom_textfield.dart';
 import '../cubit/medical_cubit.dart';
 import '../cubit/medical_state.dart';
 

@@ -22,7 +22,7 @@
 // ============================================================
 
 import 'package:flutter/material.dart';
-import '../../../../core/constants/app_colors.dart';
+import 'package:sparksteel/core/constants/app_colors.dart';
 
 class MoodSelector extends StatelessWidget {
   final String? selectedMood;
@@ -70,10 +70,10 @@ class MoodSelector extends StatelessWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
       children: _moods.map((mood) {
-        final value    = mood['value']  as String;
-        final icon     = mood['icon']   as IconData;
-        final label    = mood['label']  as String;
-        final color    = mood['color']  as Color;
+        final value = mood['value'] as String;
+        final icon = mood['icon'] as IconData;
+        final label = mood['label'] as String;
+        final color = mood['color'] as Color;
         final selected = selectedMood == value;
 
         return GestureDetector(
@@ -81,7 +81,6 @@ class MoodSelector extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-
               // Mood icon circle
               AnimatedContainer(
                 duration: const Duration(milliseconds: 200),
@@ -115,9 +114,7 @@ class MoodSelector extends StatelessWidget {
                 label,
                 style: TextStyle(
                   fontSize: 11,
-                  fontWeight: selected
-                      ? FontWeight.w600
-                      : FontWeight.w400,
+                  fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
                   color: selected ? color : AppColors.textHint,
                 ),
               ),

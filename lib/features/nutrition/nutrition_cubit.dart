@@ -1,7 +1,9 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:sparksteel/data/local/local_nutrition_service.dart';
-import 'package:sparksteel/features/nutrition/model/food_item.dart';
+import 'package:sparksteel/data/models/food_item.dart';
+import 'package:sparksteel/data/sync/sync_service.dart';
 import 'package:sparksteel/features/nutrition/nutrition_state.dart';
 
 class NutritionCubit extends Cubit<NutritionState> {
@@ -66,6 +68,10 @@ class NutritionCubit extends Cubit<NutritionState> {
       await LocalNutritionService().insertFoodItem(meal);
       getMealsForDateAndMeal(date, mealType);
       getTotalcalories(date);
+      final uid = FirebaseAuth.instance.currentUser?.uid;
+      if (uid != null) {
+        await SyncService.instance.syncAll(uid);
+      }
       // if (mealType == 'Breakfast') {
       //   breakfast = meals;
       // } else if (mealType == 'Lunch') {

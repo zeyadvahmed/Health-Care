@@ -6,7 +6,7 @@ class FoodItem {
   final double calories;
   final String mealType; // 'breakfast', 'lunch', 'dinner', 'snack'
   final String date; // yyyy-MM-dd
-  
+
 
   FoodItem({
     this.id,
@@ -24,7 +24,7 @@ class FoodItem {
       'calories': calories,
       'meal_type': mealType,
       'date': date,
-  
+
     };
   }
 
@@ -55,7 +55,7 @@ class FoodItem {
       calories: calories ?? this.calories,
       mealType: mealType ?? this.mealType,
       date: date ?? this.date,
-    
+
     );
   }
 }
