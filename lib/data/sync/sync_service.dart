@@ -48,10 +48,10 @@
 import '../local/local_exercise_service.dart';
 import '../local/local_workout_service.dart';
 import '../local/local_session_service.dart';
-// import '../local/local_activity_service.dart'; // ← uncomment when implemented
+import '../local/local_activity_service.dart';
 import '../remote/remote_exercise_service.dart';
 import '../remote/remote_workout_service.dart';
-// import '../remote/remote_activity_service.dart'; // ← uncomment when implemented
+import '../remote/remote_activity_service.dart';
 import 'connectivity_service.dart';
 
 class SyncService {
@@ -116,15 +116,11 @@ class SyncService {
       print('SyncService._syncSessionLogs failed: $e');
     }
 
-    // _syncActivity() is commented out — LocalActivityService and
-    // RemoteActivityService have no implemented methods yet.
-    // Restore this block once both services are implemented:
-    //
-    // try {
-    //   await _syncActivity();
-    // } catch (e) {
-    //   print('SyncService._syncActivity failed: $e');
-    // }
+    try {
+      await _syncActivity();
+    } catch (e) {
+      print('SyncService._syncActivity failed: $e');
+    }
   }
 
   // ----------------------------------------------------------
@@ -202,14 +198,13 @@ class SyncService {
   // methods. Uncomment imports above and restore this method
   // once both services are implemented:
   //
-  // Future<void> _syncActivity() async {
-  //   final unsynced =
-  //       await LocalActivityService.instance.getUnsyncedActivity();
-  //   for (final activity in unsynced) {
-  //     await RemoteActivityService.instance.pushActivity(activity);
-  //     await LocalActivityService.instance.markActivitySynced(activity.id);
-  //   }
-  // }
+  Future<void> _syncActivity() async {
+    final unsynced = await LocalActivityService.instance.getUnsyncedActivity();
+    for (final activity in unsynced) {
+      await RemoteActivityService.instance.pushActivity(activity);
+      await LocalActivityService.instance.markActivitySynced(activity.id);
+    }
+  }
   // ----------------------------------------------------------
 
   // ═══════════════════════════════════════════════════════════

@@ -22,9 +22,9 @@
 // ============================================================
 
 import 'package:flutter/material.dart';
-import 'package:sparksteel/features/mental_health/ui/widgets/mood_btn.dart';
-import 'package:sparksteel/features/mental_health/ui/widgets/mood_history.dart';
-import 'package:sparksteel/features/mental_health/ui/widgets/note_widget.dart';
+import 'package:sparlsteel/features/mental_health/ui/widgets/mood_btn.dart';
+import 'package:sparlsteel/features/mental_health/ui/widgets/mood_history.dart';
+import 'package:sparlsteel/features/mental_health/ui/widgets/note_widget.dart';
 
 class MentalHealthScreen extends StatelessWidget {
   const MentalHealthScreen({super.key});
