@@ -53,7 +53,9 @@ import '../local/local_mood_service.dart';
 import '../local/local_nutrition_service.dart';
 import '../local/local_workout_service.dart';
 import '../local/local_session_service.dart';
-import '../remote/remote_activity_service.dart';
+import '../local/local_activity_service.dart';
+
+import '../local/local_activity_service.dart';
 import '../remote/remote_exercise_service.dart';
 import '../remote/remote_hydration_service.dart';
 import '../remote/remote_medical_service.dart';

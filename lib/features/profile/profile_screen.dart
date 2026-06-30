@@ -37,63 +37,79 @@ class _ProfileScreenState
     loadUser();
   }
 
-  Future<void> loadUser() async {
+Future<void> loadUser() async {
 
-    final user =
-        FirebaseAuth.instance.currentUser;
+  try {
+
+    final user = FirebaseAuth.instance.currentUser;
 
     final firestoreData =
         await FirebaseFirestore.instance
-
             .collection('User')
-
             .doc(user!.uid)
-
             .get();
 
-    data =
-        firestoreData.data();
+    if (!firestoreData.exists || firestoreData.data() == null) {
 
-    data!['age'] ??= '21';
+      final localUsers = await dbHelper.getUsers();
 
-    data!['weight'] ??= '55';
+      if (localUsers.isNotEmpty) {
+        data = localUsers.first;
+      } else {
+        data = {
+          'name': '',
+          'email': user.email ?? '',
+          'age': 21,
+          'weight': 55.0,
+          'height': 160.0,
+          'waterGoal': 2.5,
+          'caloriesGoal': 2400,
+        };
+        await dbHelper.insertUserIfNotExists(data!);
+      }
 
-    data!['height'] ??= '160';
+    } else {
 
-    data!['waterGoal'] ??= '2.5';
+      data = firestoreData.data()!;
 
-    data!['caloriesGoal'] ??= '2400';
+      data!['age'] ??= 21;
+      data!['weight'] ??= 55.0;
+      data!['height'] ??= 160.0;
+      data!['waterGoal'] ??= 2.5;
+      data!['caloriesGoal'] ??= 2400;
 
-    await dbHelper
-        .insertUserIfNotExists({
+      await dbHelper.insertUserIfNotExists({
+        'name': data!['name'],
+        'email': data!['email'],
+        'age': data!['age'],
+        'weight': data!['weight'],
+        'height': data!['height'],
+        'waterGoal': data!['waterGoal'],
+        'caloriesGoal': data!['caloriesGoal'],
+      });
+    }
 
-      'name':
-          data!['name'],
-
-      'uid':
-          user.uid,
-
-      'email':
-          data!['email'],
-
-      'age':
-          data!['age'],
-
-      'weight':
-          data!['weight'],
-
-      'height':
-          data!['height'],
-
-      'waterGoal':
-          data!['waterGoal'],
-
-      'caloriesGoal':
-          data!['caloriesGoal'],
-    });
-
-    setState(() {});
+  } catch (e) {
+    debugPrint('loadUser error: $e');
+    final localUsers = await dbHelper.getUsers();
+    if (localUsers.isNotEmpty) {
+      data = localUsers.first;
+    } else {
+      data = {
+        'name': '',
+        'email': FirebaseAuth.instance.currentUser?.email ?? '',
+        'age': 21,
+        'weight': 55.0,
+        'height': 160.0,
+        'waterGoal': 2.5,
+        'caloriesGoal': 2400,
+      };
+    }
   }
+
+  if (!mounted) return;
+  setState(() {});
+}
 
   @override
   Widget build(BuildContext context) {
@@ -179,63 +195,26 @@ class _ProfileScreenState
 
                   right: 0,
 
-                  child: Center(
+                  child: const Center(
 
-                    child: Stack(
+                    child: CircleAvatar(
 
-                      children: [
+                      radius: 70,
 
-                        const CircleAvatar(
+                      backgroundColor: Colors.white,
 
-                          radius: 70,
+                      child: CircleAvatar(
 
-                          backgroundColor:
-                              Colors.white,
+                        radius: 64,
 
-                          child: CircleAvatar(
+                        backgroundColor: Color(0xFFD9CDEB),
 
-                            radius: 64,
-
-                            backgroundColor:
-                                Color(
-                              0xFFD9CDEB,
-                            ),
-                          ),
+                        child: Icon(
+                          Icons.person,
+                          size: 70,
+                          color: Colors.white,
                         ),
-
-                        Positioned(
-
-                          bottom: 6,
-
-                          right: 6,
-
-                          child: Container(
-
-                            padding:
-                                const EdgeInsets.all(
-                              8,
-                            ),
-
-                            decoration:
-                                const BoxDecoration(
-
-                              color:
-                                  Colors.white,
-
-                              shape:
-                                  BoxShape.circle,
-                            ),
-
-                            child: const Icon(
-
-                              Icons.edit,
-
-                              color:
-                                  Colors.blue,
-                            ),
-                          ),
-                        ),
-                      ],
+                      ),
                     ),
                   ),
                 ),
@@ -248,7 +227,7 @@ class _ProfileScreenState
 
             Text(
 
-              data!['name'],
+              data!['name'] ?? '',
 
               style:
                   const TextStyle(
@@ -266,7 +245,7 @@ class _ProfileScreenState
 
             Text(
 
-              data!['email'],
+              data!['email'] ?? '',
 
               style:
                   const TextStyle(
@@ -313,90 +292,59 @@ class _ProfileScreenState
                 horizontal: 24,
               ),
 
-              child: InkWell(
+            child: InkWell(
 
-                onTap: () async {
+onTap: () async {
 
-                  await authService
-                      .logout();
+  final navigator = Navigator.of(context);
 
-                  Navigator.pushAndRemoveUntil(
+  await authService.logout();
 
-                    context,
+  navigator.pushAndRemoveUntil(
+    MaterialPageRoute(
+      builder: (_) => LoginScreen(),
+    ),
+    (route) => false,
+  );
+},
 
-                    MaterialPageRoute(
+  child: Container(
 
-                      builder: (_) =>
-                          LoginScreen(),
-                    ),
+    width: double.infinity,
 
-                    (route) => false,
-                  );
-                },
+    padding: const EdgeInsets.symmetric(
+      vertical: 20,
+    ),
 
-                child: Container(
+    decoration: BoxDecoration(
+      color: const Color(0xFFFFEEEE),
+      borderRadius: BorderRadius.circular(24),
+    ),
 
-                  width:
-                      double.infinity,
+    child: const Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Icon(
+          Icons.logout,
+          color: Colors.red,
+        ),
+        SizedBox(width: 10),
+        Text(
+          'Logout',
+          style: TextStyle(
+            color: Colors.red,
+            fontSize: 28,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ],
+    ),
+  ),
+),
 
-                  padding:
-                      const EdgeInsets.symmetric(
-                    vertical: 20,
-                  ),
 
-                  decoration:
-                      BoxDecoration(
-
-                    color:
-                        const Color(
-                      0xFFFFEEEE,
-                    ),
-
-                    borderRadius:
-                        BorderRadius.circular(
-                      24,
-                    ),
-                  ),
-
-                  child: const Row(
-
-                    mainAxisAlignment:
-                        MainAxisAlignment.center,
-
-                    children: [
-
-                      Icon(
-
-                        Icons.logout,
-
-                        color:
-                            Colors.red,
-                      ),
-
-                      SizedBox(
-                        width: 10,
-                      ),
-
-                      Text(
-
-                        'Logout',
-
-                        style: TextStyle(
-
-                          color:
-                              Colors.red,
-
-                          fontSize: 28,
-
-                          fontWeight:
-                              FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
               ),
-            ),
+          
 
             const SizedBox(
               height: 40,
@@ -467,29 +415,39 @@ class _ProfileScreenState
 
   void editDialog() {
 
+    final nameController =
+    TextEditingController(
+  text: data!['name'],
+);
+
+       final emailController =
+    TextEditingController(
+  text: data!['email'],
+);
+
     final ageController =
         TextEditingController(
-      text: data!['age'],
+      text: data!['age'].toString(),
     );
 
     final weightController =
         TextEditingController(
-      text: data!['weight'],
+      text: data!['weight'].toString(),
     );
 
     final heightController =
         TextEditingController(
-      text: data!['height'],
+      text: data!['height'].toString(),
     );
 
     final waterController =
         TextEditingController(
-      text: data!['waterGoal'],
+      text: data!['waterGoal'].toString(),
     );
 
     final caloriesController =
         TextEditingController(
-      text: data!['caloriesGoal'],
+      text: data!['caloriesGoal'].toString(),
     );
 
     showDialog(
@@ -497,6 +455,11 @@ class _ProfileScreenState
       context: context,
 
       builder: (_) {
+
+        bool isSaving = false;
+
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
 
         return AlertDialog(
 
@@ -512,31 +475,63 @@ class _ProfileScreenState
               mainAxisSize:
                   MainAxisSize.min,
 
-              children: [
+                 children: [TextField(
+            controller: nameController,
+   decoration: const InputDecoration(
+    labelText: 'Name',
+  ),
+),
+
+const SizedBox(height: 10),
+
+TextField(
+  controller: emailController,
+  readOnly: true,
+  decoration: const InputDecoration(
+    labelText: 'Email',
+  ),
+),
+
+const SizedBox(height: 10),
 
                 TextField(
-                  controller:
-                      ageController,
+                  controller: ageController,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                    labelText: 'Age',
+                  ),
                 ),
 
                 TextField(
-                  controller:
-                      weightController,
+                  controller: weightController,
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  decoration: const InputDecoration(
+                    labelText: 'Weight',
+                  ),
                 ),
 
                 TextField(
-                  controller:
-                      heightController,
+                  controller: heightController,
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  decoration: const InputDecoration(
+                    labelText: 'Height',
+                  ),
                 ),
 
                 TextField(
-                  controller:
-                      waterController,
+                  controller: waterController,
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  decoration: const InputDecoration(
+                    labelText: 'Water Goal',
+                  ),
                 ),
 
                 TextField(
-                  controller:
-                      caloriesController,
+                  controller: caloriesController,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                    labelText: 'Calories Goal',
+                  ),
                 ),
               ],
             ),
@@ -544,71 +539,132 @@ class _ProfileScreenState
 
           actions: [
 
+            TextButton(
+              onPressed: isSaving ? null : () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+
             ElevatedButton(
 
-              onPressed: () async {
+              onPressed: isSaving ? null : () async {
 
-                final users =
-                    await dbHelper
-                        .getUsers();
+                if (nameController.text.trim().isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Name is required')),
+                  );
+                  return;
+                }
 
-                final userId =
-                    users.first['id'];
+                if (int.tryParse(ageController.text) == null) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Age must be a valid number')),
+                  );
+                  return;
+                }
 
-                await dbHelper
-                    .updateUser({
+                if (double.tryParse(weightController.text) == null) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Weight must be a valid number')),
+                  );
+                  return;
+                }
 
-                  'name':
-                      data!['name'],
+                if (double.tryParse(heightController.text) == null) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Height must be a valid number')),
+                  );
+                  return;
+                }
 
-                  'email':
-                      data!['email'],
+                if (double.tryParse(waterController.text) == null) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Water Goal must be a valid number')),
+                  );
+                  return;
+                }
 
-                  'age':
-                      ageController.text,
+                if (int.tryParse(caloriesController.text) == null) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Calories Goal must be a valid number')),
+                  );
+                  return;
+                }
 
-                  'weight':
-                      weightController.text,
+                try {
+                  setDialogState(() => isSaving = true);
 
-                  'height':
-                      heightController.text,
+                  final users = await dbHelper.getUsers();
 
-                  'waterGoal':
-                      waterController.text,
+                  if (users.isNotEmpty) {
+                    final userId = users.first['id'];
+                    await dbHelper.updateUser({
+                      'name': nameController.text,
+                      'email': data!['email'],
+                      'age': int.parse(ageController.text),
+                      'weight': double.parse(weightController.text),
+                      'height': double.parse(heightController.text),
+                      'waterGoal': double.parse(waterController.text),
+                      'caloriesGoal': int.parse(caloriesController.text),
+                    }, userId);
+                  } else {
+                    await dbHelper.insertUserIfNotExists({
+                      'name': nameController.text,
+                      'email': data!['email'],
+                      'age': int.parse(ageController.text),
+                      'weight': double.parse(weightController.text),
+                      'height': double.parse(heightController.text),
+                      'waterGoal': double.parse(waterController.text),
+                      'caloriesGoal': int.parse(caloriesController.text),
+                    });
+                  }
 
-                  'caloriesGoal':
-                      caloriesController.text,
+                  // Sync to Firestore
+                  final user = FirebaseAuth.instance.currentUser;
+                  await FirebaseFirestore.instance
+                      .collection('User')
+                      .doc(user!.uid)
+                      .set({
+                    'name': nameController.text,
+                    'age': int.parse(ageController.text),
+                    'weight': double.parse(weightController.text),
+                    'height': double.parse(heightController.text),
+                    'waterGoal': double.parse(waterController.text),
+                    'caloriesGoal': int.parse(caloriesController.text),
+                  }, SetOptions(merge: true));
 
-                }, userId);
+                  setState(() {
+                    data!['name'] = nameController.text;
+                    data!['age'] = int.parse(ageController.text);
+                    data!['weight'] = double.parse(weightController.text);
+                    data!['height'] = double.parse(heightController.text);
+                    data!['waterGoal'] = double.parse(waterController.text);
+                    data!['caloriesGoal'] = int.parse(caloriesController.text);
+                  });
 
-                setState(() {
+                  if (mounted) Navigator.pop(context);
 
-                  data!['age'] =
-                      ageController.text;
-
-                  data!['weight'] =
-                      weightController.text;
-
-                  data!['height'] =
-                      heightController.text;
-
-                  data!['waterGoal'] =
-                      waterController.text;
-
-                  data!['caloriesGoal'] =
-                      caloriesController.text;
-                });
-
-                Navigator.pop(
-                  context,
-                );
+                } catch (e) {
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Error saving: ${e.toString()}')),
+                    );
+                  }
+                } finally {
+                  if (mounted) setDialogState(() => isSaving = false);
+                }
               },
 
-              child: const Text(
-                'Save',
-              ),
+              child: isSaving
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Text('Save'),
             ),
           ],
+        );
+          },
         );
       },
     );
@@ -616,10 +672,10 @@ class _ProfileScreenState
 
   Widget sectionTitleGoals() {
 
-    return const Padding(
+    return Padding(
 
       padding:
-          EdgeInsets.symmetric(
+          const EdgeInsets.symmetric(
         horizontal: 24,
       ),
 
@@ -630,7 +686,7 @@ class _ProfileScreenState
 
         children: [
 
-          Text(
+          const Text(
 
             'Daily Goals',
 
@@ -643,19 +699,24 @@ class _ProfileScreenState
             ),
           ),
 
-          Text(
+          InkWell(
 
-            'Edit',
+            onTap: () => editDialog(),
 
-            style: TextStyle(
+            child: const Text(
 
-              color:
-                  Colors.blue,
+              'Edit',
 
-              fontWeight:
-                  FontWeight.bold,
+              style: TextStyle(
 
-              fontSize: 18,
+                color:
+                    Colors.blue,
+
+                fontWeight:
+                    FontWeight.bold,
+
+                fontSize: 18,
+              ),
             ),
           ),
         ],
@@ -700,23 +761,23 @@ class _ProfileScreenState
 
           children: [
 
-            detailItem(
+            DetailItem(
               'Age',
-              '${data!['age']} yrs',
+              '${int.tryParse(data!['age'].toString()) ?? 0} yrs',
             ),
 
-            const verticalDivider(),
+            const VerticalDivider(),
 
-            detailItem(
+            DetailItem(
               'Weight',
-              '${data!['weight']} kg',
+              '${(double.tryParse(data!['weight'].toString()) ?? 0).toStringAsFixed(1)} kg',
             ),
 
-            const verticalDivider(),
+            const VerticalDivider(),
 
-            detailItem(
+            DetailItem(
               'Height',
-              '${data!['height']} cm',
+              '${(double.tryParse(data!['height'].toString()) ?? 0).toStringAsFixed(1)} cm',
             ),
           ],
         ),
@@ -761,16 +822,16 @@ class _ProfileScreenState
 
           children: [
 
-            detailItem(
+            DetailItem(
               'Calories Goal',
-              '${data!['caloriesGoal']} kcal',
+              '${int.tryParse(data!['caloriesGoal'].toString()) ?? 0} kcal',
             ),
 
-            const verticalDivider(),
+            const VerticalDivider(),
 
-            detailItem(
+            DetailItem(
               'Water Goal',
-              '${data!['waterGoal']} L',
+              '${(double.tryParse(data!['waterGoal'].toString()) ?? 0).toStringAsFixed(1)} L',
             ),
           ],
         ),
@@ -779,46 +840,28 @@ class _ProfileScreenState
   }
 }
 
-class detailItem
-    extends StatelessWidget {
+class DetailItem extends StatelessWidget {
 
   final String title;
   final String value;
 
-  const detailItem(
-
+  const DetailItem(
     this.title,
     this.value, {
-
     super.key,
   });
 
   @override
   Widget build(BuildContext context) {
-
     return Column(
-
       children: [
-
+        Text(title),
+        const SizedBox(height: 10),
         Text(
-          title,
-        ),
-
-        const SizedBox(
-          height: 10,
-        ),
-
-        Text(
-
           value,
-
-          style:
-              const TextStyle(
-
+          style: const TextStyle(
             fontSize: 22,
-
-            fontWeight:
-                FontWeight.bold,
+            fontWeight: FontWeight.bold,
           ),
         ),
       ],
@@ -826,10 +869,9 @@ class detailItem
   }
 }
 
-class verticalDivider
-    extends StatelessWidget {
+class VerticalDivider extends StatelessWidget {
 
-  const verticalDivider({
+  const VerticalDivider({
     super.key,
   });
 
@@ -842,8 +884,7 @@ class verticalDivider
 
       height: 65,
 
-      color:
-          Colors.black12,
+      color: Colors.black12,
     );
   }
 }
