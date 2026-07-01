@@ -1,31 +1,56 @@
 import 'package:flutter/material.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../data/models/activity_challenge_model.dart';
 
 class ActivityCard extends StatelessWidget {
-  // Challenge display data
-  final String title;
-  final String subtitle;
-  final String xpReward;    // e.g. "+50 XP"
-  final double progress;    // 0.0 to 1.0
-  final IconData icon;
-  final Color iconColor;
-  final Color iconBgColor;
-  final bool isCompleted;
+  final ActivityChallengeModel challenge;
 
   const ActivityCard({
     super.key,
-    required this.title,
-    required this.subtitle,
-    required this.xpReward,
-    required this.progress,
-    required this.icon,
-    required this.iconColor,
-    required this.iconBgColor,
-    this.isCompleted = false,
+    required this.challenge,
   });
+
+  IconData _iconData() {
+    switch (challenge.type) {
+      case 'hydration':
+        return Icons.water_drop_rounded;
+      case 'nutrition':
+        return Icons.restaurant_rounded;
+      case 'workout':
+        return Icons.fitness_center_rounded;
+      case 'meditation':
+        return Icons.self_improvement_rounded;
+      case 'medication':
+        return Icons.medication_rounded;
+      default:
+        return Icons.star_rounded;
+    }
+  }
+
+  Color _iconColor() {
+    if (challenge.completed) return AppColors.success;
+    switch (challenge.type) {
+      case 'hydration':
+        return AppColors.steelColor;
+      case 'nutrition':
+        return const Color(0xFFFFA726);
+      case 'workout':
+        return const Color(0xFF29B6F6);
+      case 'meditation':
+        return const Color(0xFF7E57C2);
+      case 'medication':
+        return const Color(0xFF66BB6A);
+      default:
+        return AppColors.steelColor;
+    }
+  }
+
+  Color _iconBgColor() => _iconColor().withOpacity(0.12);
 
   @override
   Widget build(BuildContext context) {
+    final color = _iconColor();
+
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(14),
@@ -47,20 +72,20 @@ class ActivityCard extends StatelessWidget {
             width: 48,
             height: 48,
             decoration: BoxDecoration(
-              color: iconBgColor,
+              color: _iconBgColor(),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: Icon(icon, color: iconColor, size: 24),
+            child: Icon(_iconData(), color: color, size: 24),
           ),
           const SizedBox(width: 12),
 
-          // ── Title + progress ──────────────────────────
+          // ── Title + subtitle + progress bar ───────────
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  title,
+                  challenge.title,
                   style: const TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w700,
@@ -69,23 +94,24 @@ class ActivityCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  subtitle,
-                  style: const TextStyle(
+                  challenge.subtitle,
+                  style: TextStyle(
                     fontSize: 12,
-                    color: Color(0xFF888888),
+                    color: challenge.completed
+                        ? AppColors.success
+                        : const Color(0xFF888888),
                   ),
                 ),
                 const SizedBox(height: 8),
-                // Progress bar
+
+                // Dynamic progress bar
                 ClipRRect(
                   borderRadius: BorderRadius.circular(4),
                   child: LinearProgressIndicator(
-                    value: progress,
+                    value: challenge.progress,
                     minHeight: 5,
                     backgroundColor: const Color(0xFFE8E8E8),
-                    valueColor: AlwaysStoppedAnimation<Color>(
-                      isCompleted ? AppColors.success : iconColor,
-                    ),
+                    valueColor: AlwaysStoppedAnimation<Color>(color),
                   ),
                 ),
               ],
@@ -95,11 +121,13 @@ class ActivityCard extends StatelessWidget {
 
           // ── XP reward badge ───────────────────────────
           Text(
-            xpReward,
+            '+${challenge.xpReward} XP',
             style: TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w700,
-              color: isCompleted ? AppColors.success : AppColors.steelColor,
+              color: challenge.completed
+                  ? AppColors.success
+                  : AppColors.steelColor,
             ),
           ),
         ],
