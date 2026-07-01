@@ -55,9 +55,9 @@ class RegisterScreen
 
             Container(
 
-              width: 120,
+              width: 100,
 
-              height: 120,
+              height: 100,
 
               decoration:
                   BoxDecoration(
@@ -78,7 +78,7 @@ class RegisterScreen
                 color:
                     Colors.white,
 
-                size: 60,
+                size: 48,
               ),
             ),
 
@@ -101,7 +101,7 @@ class RegisterScreen
                       color:
                           Colors.white,
 
-                      fontSize: 34,
+                      fontSize: 28,
 
                       fontWeight:
                           FontWeight.bold,
@@ -117,7 +117,7 @@ class RegisterScreen
                       color:
                           Colors.blue,
 
-                      fontSize: 34,
+                      fontSize: 28,
 
                       fontWeight:
                           FontWeight.bold,
@@ -179,7 +179,7 @@ class RegisterScreen
                           color:
                               Colors.blue,
 
-                          fontSize: 36,
+                          fontSize: 28,
 
                           fontWeight:
                               FontWeight.bold,
@@ -199,7 +199,7 @@ class RegisterScreen
                           color:
                               Colors.black54,
 
-                          fontSize: 18,
+                          fontSize: 14,
                         ),
                       ),
 
@@ -434,8 +434,8 @@ class RegisterScreen
 
         contentPadding:
             const EdgeInsets.symmetric(
-          horizontal: 20,
-          vertical: 18,
+          horizontal: 18,
+          vertical: 14,
         ),
       ),
     );
@@ -444,105 +444,65 @@ class RegisterScreen
   Widget registerButton(
     BuildContext context,
   ) {
-
     return SizedBox(
-
       width: double.infinity,
-
-      height: 65,
-
+      height: 55,
       child: ElevatedButton(
-
-        style:
-            ElevatedButton.styleFrom(
-
-          backgroundColor:
-              Colors.blue,
-
-          shape:
-              RoundedRectangleBorder(
-
-            borderRadius:
-                BorderRadius.circular(
-              20,
-            ),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.blue,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
           ),
         ),
-
         onPressed: () async {
-
-          if (passwordController.text !=
-              confirmPasswordController
-                  .text) {
-
+          if (passwordController.text != confirmPasswordController.text) {
             CustomSnackbar.show(
-
               context,
-
               'Passwords do not match',
             );
-
             return;
           }
 
           try {
-
             await authService.register(
-              name: 
-                  nameController.text
-                          .trim(),
-              email: 
-                  emailController.text
-                           .trim(),
-                  password:
-                      passwordController.text.trim(),
-  );
+              name: nameController.text.trim(),
+              email: emailController.text.trim(),
+              password: passwordController.text.trim(),
+            );
 
-  final dbHelper = DatabaseHelper();
+            final dbHelper = DatabaseHelper.instance;
+            await dbHelper.insertUserIfNotExists({
+              'name': nameController.text.trim(),
+              'email': emailController.text.trim(),
+              'age': '21',
+              'weight': '55',
+              'height': '160',
+              'waterGoal': '2.5',
+              'caloriesGoal': '2400',
+            });
 
-  await dbHelper.insertUserIfNotExists({
-    'name': nameController.text.trim(),
-    'email': emailController.text.trim(),
-    'age': '21',
-    'weight': '55',
-    'height': '160',
-    'waterGoal': '2.5',
-    'caloriesGoal': '2400',
-  });
-
-  if (!context.mounted) return;
+            if (!context.mounted) return;
 
             Navigator.pushReplacement(
-    context,
-    MaterialPageRoute(
-      builder: (_) => const MainNavScreen(),
-    ),
-  );
-
+              context,
+              MaterialPageRoute(
+                builder: (_) => const MainNavScreen(),
+              ),
+            );
           } catch (e) {
-
-  if (!context.mounted) return;
-
+            if (!context.mounted) return;
             CustomSnackbar.show(
-                context,
-                e.toString(),
-         );
-        }
+              context,
+              e.toString(),
+            );
+          }
         },
-
         child: const Text(
-
           'Register',
-
           style: TextStyle(
-
-            color:
-                Colors.white,
-
-            fontSize: 28,
-
-            fontWeight:
-                FontWeight.bold,
+            color: Colors.white,
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
           ),
         ),
       ),
@@ -552,37 +512,19 @@ class RegisterScreen
   Widget socialButton(
     String text,
   ) {
-
     return Container(
-
-      width: 65,
-
-      height: 65,
-
-      decoration:
-          BoxDecoration(
-
-        color:
-            const Color(
-          0xFFE4E4E4,
-        ),
-
-        shape:
-            BoxShape.circle,
+      width: 55,
+      height: 55,
+      decoration: const BoxDecoration(
+        color: Color(0xFFE4E4E4),
+        shape: BoxShape.circle,
       ),
-
       child: Center(
-
         child: Text(
-
           text,
-
           style: const TextStyle(
-
-            fontSize: 28,
-
-            fontWeight:
-                FontWeight.bold,
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
           ),
         ),
       ),

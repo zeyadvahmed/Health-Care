@@ -2,11 +2,12 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-import 'app.dart';
-import 'firebase_options.dart';
-
 import 'package:sparksteel/cubit/workout/workout_cubit.dart';
 import 'package:sparksteel/features/auth/splash_screen.dart';
+import 'package:sparksteel/features/workout/workout_controller.dart';
+
+import 'app.dart';
+import 'firebase_options.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -15,7 +16,15 @@ void main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
-  runApp(const MyApp());
+  runApp(
+    MultiBlocProvider(
+      providers: [
+        BlocProvider(create: (_) => WorkoutCubit()),
+        BlocProvider(create: (_) => WorkoutController()),
+      ],
+      child: const SparkSteelApp(),
+    ),
+  );
 }
 
 class MyApp extends StatelessWidget {
@@ -25,7 +34,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocProvider(
       create: (_) => WorkoutCubit(),
-      child: const MaterialApp(
+      child:  MaterialApp(
         debugShowCheckedModeBanner: false,
         home: SplashScreen(),
       ),

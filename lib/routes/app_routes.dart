@@ -5,6 +5,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:sparksteel/features/chat_bot/ui/chat_bot_screen.dart';
 import 'package:sparksteel/features/mental_health/logic/mental_cubit.dart';
 import 'package:sparksteel/features/nutrition/nutrition_cubit.dart';
 
@@ -13,7 +14,6 @@ import '../features/activity/ui/activity_screen.dart';
 import '../features/auth/login_screen.dart';
 import '../features/auth/signup_screen.dart';
 import '../features/auth/splash_screen.dart';
-import '../features/chatbot/chatbot_screen.dart';
 import '../features/home/home_screen.dart';
 import '../features/hydration/cubit/hydration_cubit.dart';
 import '../features/hydration/ui/hydration_screen.dart';
@@ -26,6 +26,7 @@ import '../features/profile/profile_screen.dart';
 import '../features/progress/progress_screen.dart';
 import '../features/workout/create_workout_screen.dart';
 import '../features/workout/exercise_search_screen.dart';
+import '../features/workout/workout_controller.dart';
 import '../features/workout/workout_list_screen.dart';
 
 class AppRoutes {
@@ -71,9 +72,18 @@ class AppRoutes {
     ),
     profile: (_) => const ProfileScreen(),
 
-    workoutList: (_) => const WorkoutListScreen(),
-    createWorkout: (_) => const CreateWorkoutScreen(userId: ''),
-    exerciseSearch: (_) => const ExerciseSearchScreen(),
+    workoutList: (_) => BlocProvider(
+      create: (context) => WorkoutController(),
+      child: const WorkoutListScreen(),
+    ),
+    createWorkout: (_) => BlocProvider(
+      create: (context) => WorkoutController(),
+      child: const CreateWorkoutScreen(userId: ''),
+    ),
+    exerciseSearch: (_) => BlocProvider(
+      create: (context) => WorkoutController(),
+      child: const ExerciseSearchScreen(),
+    ),
 
     nutrition: (_) => BlocProvider(
       create: (context) => NutritionCubit()
@@ -115,6 +125,6 @@ class AppRoutes {
       child: const AddMedicationScreen(userId: '', uid: ''),
     ),
 
-    chatbot: (_) => const ChatbotScreen(),
+    chatbot: (_) => const ChatBotScreen(),
   };
 }

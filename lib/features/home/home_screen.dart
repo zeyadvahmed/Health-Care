@@ -1,3 +1,5 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 import '../../core/constants/app_spacing.dart';
@@ -33,22 +35,46 @@ class _HomeScreenState
       WorkoutService();
 
   List<WorkoutModel> workouts = [];
+  String userName = 'Guest';
 
   @override
   void initState() {
     super.initState();
 
     loadWorkouts();
+    loadUserName();
   }
 
   Future<void> loadWorkouts() async {
-
     final data =
         await workoutService.getWorkouts();
 
     setState(() {
       workouts = data;
     });
+  }
+
+  Future<void> loadUserName() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      return;
+    }
+
+    try {
+      final snapshot = await FirebaseFirestore.instance
+          .collection('User')
+          .doc(user.uid)
+          .get();
+
+      final name = snapshot.data()?['name'] as String?;
+      if (name != null && name.isNotEmpty) {
+        setState(() {
+          userName = name;
+        });
+      }
+    } catch (e) {
+      debugPrint('HomeScreen.loadUserName error: $e');
+    }
   }
 
   void _openWorkoutOverview(WorkoutModel workout) {
@@ -77,11 +103,9 @@ class _HomeScreenState
 
           children: [
 
-          const Text(
-            'Welcome, Basmala',
-
-            style:
-                AppTextStyles.heading,
+          Text(
+            'Welcome, $userName',
+            style: AppTextStyles.heading,
           ),
 
           const SizedBox(
@@ -145,84 +169,61 @@ class _HomeScreenState
 
           const Text(
             'Explore',
-
-            style:
-                AppTextStyles.heading,
+            style: TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              color: Colors.black,
+            ),
           ),
 
           const SizedBox(
-            height:
-                AppSpacing.medium,
+            height: AppSpacing.medium,
           ),
 
-          Wrap(
+          Column(
             children: [
-
               ExploreCard(
                 title: 'Workout',
-
-                icon:
-                    Icons.fitness_center,
-
+                icon: Icons.fitness_center,
                 onTap: () => Navigator.pushNamed(
                   context,
                   AppRoutes.workoutList,
                 ),
               ),
-
               ExploreCard(
-                title:
-                    'Medical Tracker',
-
-                icon:
-                    Icons.medical_services,
-
+                title: 'Medical Tracker',
+                icon: Icons.medical_services,
                 onTap: () => Navigator.pushNamed(
                   context,
                   AppRoutes.medicalTracker,
                 ),
               ),
-
               ExploreCard(
-                title:
-                    'Nutrition Plan',
-
-                icon:
-                    Icons.restaurant,
-
+                title: 'Nutrition Plan',
+                icon: Icons.restaurant,
                 onTap: () => Navigator.pushNamed(
                   context,
                   AppRoutes.nutrition,
                 ),
               ),
-
               ExploreCard(
-                title:
-                    'Mental Health',
-
-                icon:
-                    Icons.psychology,
-
+                title: 'Mental Health',
+                icon: Icons.psychology,
                 onTap: () => Navigator.pushNamed(
                   context,
                   AppRoutes.mentalHealth,
                 ),
               ),
-
               ExploreCard(
-                title:
-                    'Hydration Tracker',
-
-                icon:
-                    Icons.local_drink,
-
+                title: 'Hydration Tracker',
+                icon: Icons.local_drink,
                 onTap: () => Navigator.pushNamed(
                   context,
                   AppRoutes.hydration,
                 ),
               ),
             ],
-            ),
+          ),
           ],
         ),
       ),

@@ -150,7 +150,7 @@ Future<void> loadUser() async {
 
                 Container(
 
-                  height: 260,
+                  height: 220,
 
                   width:
                       double.infinity,
@@ -177,7 +177,7 @@ Future<void> loadUser() async {
                           color:
                               Colors.white,
 
-                          fontSize: 36,
+                          fontSize: 28,
 
                           fontWeight:
                               FontWeight.bold,
@@ -189,7 +189,7 @@ Future<void> loadUser() async {
 
                 Positioned(
 
-                  bottom: -70,
+                  bottom: -58,
 
                   left: 0,
 
@@ -199,19 +199,19 @@ Future<void> loadUser() async {
 
                     child: CircleAvatar(
 
-                      radius: 70,
+                      radius: 56,
 
                       backgroundColor: Colors.white,
 
                       child: CircleAvatar(
 
-                        radius: 64,
+                        radius: 52,
 
                         backgroundColor: Color(0xFFD9CDEB),
 
                         child: Icon(
                           Icons.person,
-                          size: 70,
+                          size: 50,
                           color: Colors.white,
                         ),
                       ),
@@ -222,7 +222,7 @@ Future<void> loadUser() async {
             ),
 
             const SizedBox(
-              height: 90,
+              height: 70,
             ),
 
             Text(
@@ -232,7 +232,7 @@ Future<void> loadUser() async {
               style:
                   const TextStyle(
 
-                fontSize: 34,
+                fontSize: 24,
 
                 fontWeight:
                     FontWeight.bold,
@@ -240,7 +240,7 @@ Future<void> loadUser() async {
             ),
 
             const SizedBox(
-              height: 6,
+              height: 4,
             ),
 
             Text(
@@ -253,12 +253,12 @@ Future<void> loadUser() async {
                 color:
                     Colors.grey,
 
-                fontSize: 18,
+                fontSize: 14,
               ),
             ),
 
             const SizedBox(
-              height: 35,
+              height: 24,
             ),
 
             sectionTitle(),
@@ -270,7 +270,7 @@ Future<void> loadUser() async {
             detailsCard(),
 
             const SizedBox(
-              height: 30,
+              height: 24,
             ),
 
             sectionTitleGoals(),
@@ -282,72 +282,60 @@ Future<void> loadUser() async {
             goalsCard(),
 
             const SizedBox(
-              height: 35,
+              height: 24,
             ),
 
             Padding(
-
-              padding:
-                  const EdgeInsets.symmetric(
+              padding: const EdgeInsets.symmetric(
                 horizontal: 24,
               ),
+              child: InkWell(
+                onTap: () async {
+                  final navigator = Navigator.of(context);
 
-            child: InkWell(
+                  await authService.logout();
 
-onTap: () async {
-
-  final navigator = Navigator.of(context);
-
-  await authService.logout();
-
-  navigator.pushAndRemoveUntil(
-    MaterialPageRoute(
-      builder: (_) => LoginScreen(),
-    ),
-    (route) => false,
-  );
-},
-
-  child: Container(
-
-    width: double.infinity,
-
-    padding: const EdgeInsets.symmetric(
-      vertical: 20,
-    ),
-
-    decoration: BoxDecoration(
-      color: const Color(0xFFFFEEEE),
-      borderRadius: BorderRadius.circular(24),
-    ),
-
-    child: const Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Icon(
-          Icons.logout,
-          color: Colors.red,
-        ),
-        SizedBox(width: 10),
-        Text(
-          'Logout',
-          style: TextStyle(
-            color: Colors.red,
-            fontSize: 28,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-      ],
-    ),
-  ),
-),
-
-
+                  navigator.pushAndRemoveUntil(
+                    MaterialPageRoute(
+                      builder: (_) => LoginScreen(),
+                    ),
+                    (route) => false,
+                  );
+                },
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 12,
+                  ),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFEEEE),
+                    borderRadius: BorderRadius.circular(24),
+                  ),
+                  child: const Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.logout,
+                        color: Colors.red,
+                        size: 20,
+                      ),
+                      SizedBox(width: 8),
+                      Text(
+                        'Logout',
+                        style: TextStyle(
+                          color: Colors.red,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
-          
+            ),
 
             const SizedBox(
-              height: 40,
+              height: 24,
             ),
           ],
         ),
@@ -378,7 +366,7 @@ onTap: () async {
             style:
                 TextStyle(
 
-              fontSize: 30,
+              fontSize: 22,
 
               fontWeight:
                   FontWeight.bold,
@@ -475,24 +463,25 @@ onTap: () async {
               mainAxisSize:
                   MainAxisSize.min,
 
-                 children: [TextField(
-            controller: nameController,
-   decoration: const InputDecoration(
-    labelText: 'Name',
-  ),
-),
+                 children: [
+                TextField(
+                  controller: nameController,
+                  decoration: const InputDecoration(
+                    labelText: 'Name',
+                  ),
+                ),
 
-const SizedBox(height: 10),
+                const SizedBox(height: 14),
 
-TextField(
-  controller: emailController,
-  readOnly: true,
-  decoration: const InputDecoration(
-    labelText: 'Email',
-  ),
-),
+                TextField(
+                  controller: emailController,
+                  readOnly: true,
+                  decoration: const InputDecoration(
+                    labelText: 'Email',
+                  ),
+                ),
 
-const SizedBox(height: 10),
+                const SizedBox(height: 14),
 
                 TextField(
                   controller: ageController,
@@ -502,6 +491,8 @@ const SizedBox(height: 10),
                   ),
                 ),
 
+                const SizedBox(height: 14),
+
                 TextField(
                   controller: weightController,
                   keyboardType: const TextInputType.numberWithOptions(decimal: true),
@@ -509,6 +500,8 @@ const SizedBox(height: 10),
                     labelText: 'Weight',
                   ),
                 ),
+
+                const SizedBox(height: 14),
 
                 TextField(
                   controller: heightController,
@@ -518,6 +511,8 @@ const SizedBox(height: 10),
                   ),
                 ),
 
+                const SizedBox(height: 14),
+
                 TextField(
                   controller: waterController,
                   keyboardType: const TextInputType.numberWithOptions(decimal: true),
@@ -525,6 +520,8 @@ const SizedBox(height: 10),
                     labelText: 'Water Goal',
                   ),
                 ),
+
+                const SizedBox(height: 14),
 
                 TextField(
                   controller: caloriesController,
@@ -692,7 +689,7 @@ const SizedBox(height: 10),
 
             style: TextStyle(
 
-              fontSize: 30,
+              fontSize: 22,
 
               fontWeight:
                   FontWeight.bold,
@@ -855,12 +852,15 @@ class DetailItem extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        Text(title),
-        const SizedBox(height: 10),
+        Text(
+          title,
+          style: const TextStyle(fontSize: 14),
+        ),
+        const SizedBox(height: 8),
         Text(
           value,
           style: const TextStyle(
-            fontSize: 22,
+            fontSize: 18,
             fontWeight: FontWeight.bold,
           ),
         ),

@@ -6,11 +6,11 @@ import 'package:sparksteel/features/nutrition/nutrition_state.dart';
 import 'package:sparksteel/shared/widgets/inputs/custom_textfield.dart';
 
 class MealCardFood extends StatelessWidget {
-  String title;
-  String recommended;
-  String imagePath;
-  Color iconBgColor;
-  MealCardFood({
+  final String title;
+  final String recommended;
+  final String imagePath;
+  final Color iconBgColor;
+  const MealCardFood({
     super.key,
     required this.title,
     required this.recommended,
@@ -163,7 +163,6 @@ class MealCardFood extends StatelessWidget {
                                           Form(
                                             key: nutritionCubit.formKey,
                                             child: Column(
-                                              spacing: 5,
                                               mainAxisSize: MainAxisSize.min,
                                               children: [
                                                 CustomTextfield(

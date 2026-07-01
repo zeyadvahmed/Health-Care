@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:uuid/uuid.dart';
 import '../../../core/constants/app_colors.dart';
-import '../../../core/constants/app_strings.dart';
 import '../../../data/models/hydration_entry_model.dart';
 import '../../../shared/widgets/buttons/custom_button.dart';
 import '../../../shared/widgets/inputs/custom_textfield.dart';

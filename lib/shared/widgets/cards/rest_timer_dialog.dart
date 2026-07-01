@@ -163,7 +163,7 @@ class _RestTimerDialogState extends State<RestTimerDialog> {
                     child: Text(
                       '$_remaining',
                       style: const TextStyle(
-                        color: Colors.white,
+                        color: Colors.black,
                         fontSize: 36,
                         fontWeight: FontWeight.bold,
                         fontFamily: 'monospace',

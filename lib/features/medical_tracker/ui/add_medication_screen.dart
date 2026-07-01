@@ -112,17 +112,6 @@ class _AddMedicationScreenState extends State<AddMedicationScreen> {
     }
   }
 
-  String _formatReminderTimes() {
-    return _scheduleTimes
-        .map((t) {
-          final hour = t.hourOfPeriod == 0 ? 12 : t.hourOfPeriod;
-          final minute = t.minute.toString().padLeft(2, '0');
-          final period = t.period == DayPeriod.am ? 'AM' : 'PM';
-          return '$hour:$minute $period';
-        })
-        .join(', ');
-  }
-
   Future<void> _pickTime(int index) async {
     final picked = await showTimePicker(
       context: context,

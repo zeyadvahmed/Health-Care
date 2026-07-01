@@ -127,7 +127,7 @@ class WorkoutCard extends StatelessWidget {
                 Text(
                   workout.name,
                   style: const TextStyle(
-                    color: Colors.white,
+                    color: Colors.black,
                     fontSize: 14,
                     fontWeight: FontWeight.bold,
                   ),
