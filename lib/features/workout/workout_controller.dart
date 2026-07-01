@@ -391,34 +391,34 @@ class WorkoutController extends Cubit<WorkoutState> {
     });
   }
 
-  // Stub — restore when LocalActivityService is implemented:
-  //
-  // Future<void> _awardXp(String userId) async {
-  //   final current =
-  //       await LocalActivityService.instance.getActivityForUser(userId);
-  //   final now = DateTime.now();
-  //   if (current == null) {
-  //     final newActivity = ActivityModel(
-  //       id:            const Uuid().v4(),
-  //       userId:        userId,
-  //       totalXp:       100,
-  //       currentLevel:  0,
-  //       xpToNextLevel: 400,
-  //       updatedAt:     now,
-  //       isSynced:      false,
-  //     );
-  //     await LocalActivityService.instance.insertActivity(newActivity);
-  //   } else {
-  //     final newXp     = current.totalXp + 100;
-  //     final newLevel  = newXp ~/ 500;
-  //     final updated = current.copyWith(
-  //       totalXp:       newXp,
-  //       currentLevel:  newLevel,
-  //       xpToNextLevel: ((newLevel + 1) * 500) - newXp,
-  //       updatedAt:     now,
-  //       isSynced:      false,
-  //     );
-  //     await LocalActivityService.instance.updateActivity(updated);
-  //   }
-  // }
+ 
+  
+  Future<void> _awardXp(String userId) async {
+    final current =
+        await LocalActivityService.instance.getActivityForUser(userId);
+    final now = DateTime.now();
+    if (current == null) {
+      final newActivity = ActivityModel(
+        id:            const Uuid().v4(),
+        userId:        userId,
+        totalXp:       100,
+        currentLevel:  0,
+        xpToNextLevel: 400,
+        updatedAt:     now,
+        isSynced:      false,
+      );
+      await LocalActivityService.instance.insertActivity(newActivity);
+    } else {
+      final newXp     = current.totalXp + 100;
+      final newLevel  = newXp ~/ 500;
+      final updated = current.copyWith(
+        totalXp:       newXp,
+        currentLevel:  newLevel,
+        xpToNextLevel: ((newLevel + 1) * 500) - newXp,
+        updatedAt:     now,
+        isSynced:      false,
+      );
+      await LocalActivityService.instance.updateActivity(updated);
+    }
+  }
 }
