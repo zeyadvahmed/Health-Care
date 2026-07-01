@@ -43,14 +43,14 @@ class LoginScreen
           children: [
 
             const SizedBox(
-              height: 40,
+              height: 30,
             ),
 
             Container(
 
-              width: 120,
+              width: 100,
 
-              height: 120,
+              height: 100,
 
               decoration:
                   BoxDecoration(
@@ -71,7 +71,7 @@ class LoginScreen
                 color:
                     Colors.white,
 
-                size: 60,
+                size: 48,
               ),
             ),
 
@@ -94,7 +94,7 @@ class LoginScreen
                       color:
                           Colors.white,
 
-                      fontSize: 34,
+                      fontSize: 28,
 
                       fontWeight:
                           FontWeight.bold,
@@ -110,7 +110,7 @@ class LoginScreen
                       color:
                           Colors.blue,
 
-                      fontSize: 34,
+                      fontSize: 28,
 
                       fontWeight:
                           FontWeight.bold,
@@ -172,7 +172,7 @@ class LoginScreen
                           color:
                               Colors.blue,
 
-                          fontSize: 38,
+                          fontSize: 28,
 
                           fontWeight:
                               FontWeight.bold,
@@ -192,12 +192,12 @@ class LoginScreen
                           color:
                               Colors.black54,
 
-                          fontSize: 18,
+                          fontSize: 14,
                         ),
                       ),
 
                       const SizedBox(
-                        height: 40,
+                        height: 24,
                       ),
 
                       textField(
@@ -447,8 +447,8 @@ class LoginScreen
 
         contentPadding:
             const EdgeInsets.symmetric(
-          horizontal: 20,
-          vertical: 18,
+          horizontal: 18,
+          vertical: 14,
         ),
       ),
     );
@@ -462,7 +462,7 @@ class LoginScreen
 
       width: double.infinity,
 
-      height: 65,
+      height: 55,
 
       child: ElevatedButton(
 
@@ -528,7 +528,7 @@ class LoginScreen
             color:
                 Colors.white,
 
-            fontSize: 28,
+            fontSize: 20,
 
             fontWeight:
                 FontWeight.bold,
@@ -544,9 +544,9 @@ class LoginScreen
 
     return Container(
 
-      width: 65,
+      width: 55,
 
-      height: 65,
+      height: 55,
 
       decoration:
           BoxDecoration(
@@ -568,7 +568,7 @@ class LoginScreen
 
           style: const TextStyle(
 
-            fontSize: 28,
+            fontSize: 24,
 
             fontWeight:
                 FontWeight.bold,

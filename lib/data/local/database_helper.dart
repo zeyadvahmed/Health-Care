@@ -67,7 +67,7 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 5,
+      version: 6,
       onCreate: _onCreate, // runs once on fresh install
       onUpgrade: _onUpgrade,
     );
@@ -79,6 +79,8 @@ class DatabaseHelper {
     int newVersion,
   ) async {
     await _createMergedTablesIfMissing(db);
+
+    await _createActivityTablesIfMissing(db);
 
     await _addColumnIfMissing(db, 'workouts', 'imageUrl', 'imageUrl TEXT');
 
@@ -202,6 +204,41 @@ class DatabaseHelper {
         notes TEXT,
         isTaken INTEGER NOT NULL DEFAULT 0,
         createdAt TEXT,
+        updatedAt TEXT NOT NULL,
+        isSynced INTEGER NOT NULL DEFAULT 0
+      )
+    ''');
+
+    await _createActivityTablesIfMissing(db);
+  }
+
+  static Future<void> _createActivityTablesIfMissing(Database db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS activity (
+        id TEXT PRIMARY KEY,
+        userId TEXT NOT NULL,
+        totalXp INTEGER NOT NULL DEFAULT 0,
+        currentLevel INTEGER NOT NULL DEFAULT 0,
+        xpToNextLevel INTEGER NOT NULL DEFAULT 500,
+        updatedAt TEXT NOT NULL,
+        isSynced INTEGER NOT NULL DEFAULT 0
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS activity_challenges (
+        id TEXT PRIMARY KEY,
+        userId TEXT NOT NULL,
+        title TEXT NOT NULL,
+        description TEXT NOT NULL,
+        type TEXT NOT NULL,
+        target INTEGER NOT NULL DEFAULT 0,
+        currentProgress INTEGER NOT NULL DEFAULT 0,
+        xpReward INTEGER NOT NULL DEFAULT 0,
+        completed INTEGER NOT NULL DEFAULT 0,
+        rewardClaimed INTEGER NOT NULL DEFAULT 0,
+        challengeDate TEXT NOT NULL,
+        completedAt TEXT,
         updatedAt TEXT NOT NULL,
         isSynced INTEGER NOT NULL DEFAULT 0
       )
@@ -595,6 +632,27 @@ class DatabaseHelper {
         totalXp INTEGER NOT NULL DEFAULT 0,
         currentLevel INTEGER NOT NULL DEFAULT 0,
         xpToNextLevel INTEGER NOT NULL DEFAULT 500,
+        updatedAt TEXT NOT NULL,
+        isSynced INTEGER NOT NULL DEFAULT 0
+      )
+    ''');
+
+    // ── TABLE 13: activity_challenges ───────────────────────
+    // Daily challenge rows tied to a user and a specific date.
+    await db.execute('''
+      CREATE TABLE activity_challenges (
+        id TEXT PRIMARY KEY,
+        userId TEXT NOT NULL,
+        title TEXT NOT NULL,
+        description TEXT NOT NULL,
+        type TEXT NOT NULL,
+        target INTEGER NOT NULL DEFAULT 0,
+        currentProgress INTEGER NOT NULL DEFAULT 0,
+        xpReward INTEGER NOT NULL DEFAULT 0,
+        completed INTEGER NOT NULL DEFAULT 0,
+        rewardClaimed INTEGER NOT NULL DEFAULT 0,
+        challengeDate TEXT NOT NULL,
+        completedAt TEXT,
         updatedAt TEXT NOT NULL,
         isSynced INTEGER NOT NULL DEFAULT 0
       )

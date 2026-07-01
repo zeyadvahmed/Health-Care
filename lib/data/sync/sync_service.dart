@@ -53,15 +53,13 @@ import '../local/local_mood_service.dart';
 import '../local/local_nutrition_service.dart';
 import '../local/local_workout_service.dart';
 import '../local/local_session_service.dart';
-import '../local/local_activity_service.dart';
-
-import '../local/local_activity_service.dart';
 import '../remote/remote_exercise_service.dart';
 import '../remote/remote_hydration_service.dart';
 import '../remote/remote_medical_service.dart';
 import '../remote/remote_mood_service.dart';
 import '../remote/remote_nutrition_service.dart';
 import '../remote/remote_workout_service.dart';
+import '../remote/remote_activity_service.dart';
 import 'connectivity_service.dart';
 
 class SyncService {
@@ -155,6 +153,7 @@ class SyncService {
     } catch (e) {
       print('SyncService._syncActivity failed: $e');
     }
+    
   }
 
   // ----------------------------------------------------------
@@ -226,22 +225,6 @@ class SyncService {
   }
 
   // ----------------------------------------------------------
-  // _syncActivity()
-  // STUB — intentionally not implemented yet.
-  // LocalActivityService and RemoteActivityService have no
-  // methods. Uncomment imports above and restore this method
-  // once both services are implemented:
-  //
-  // Future<void> _syncActivity() async {
-  //   final unsynced =
-  //       await LocalActivityService.instance.getUnsyncedActivity();
-  //   for (final activity in unsynced) {
-  //     await RemoteActivityService.instance.pushActivity(activity);
-  //     await LocalActivityService.instance.markActivitySynced(activity.id);
-  //   }
-  // }
-  // ----------------------------------------------------------
-
   // ═══════════════════════════════════════════════════════════
   // ----------------------------------------------------------
   // _syncNutrition()

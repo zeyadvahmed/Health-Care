@@ -4,10 +4,10 @@ import 'package:sparksteel/features/mental_health/logic/mental_cubit.dart';
 import 'package:sparksteel/features/mental_health/logic/mental_state.dart';
 
 class MoodBtn extends StatelessWidget {
-  String mood;
-  String emoji;
-  Color color;
-  MoodBtn({
+  final String mood;
+  final String emoji;
+  final Color color;
+  const MoodBtn({
     super.key,
     required this.mood,
     required this.emoji,

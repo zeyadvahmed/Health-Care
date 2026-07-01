@@ -5,8 +5,8 @@ import 'package:sparksteel/core/constants/app_colors.dart';
 import 'package:sparksteel/data/models/guided_exercise.dart';
 
 class GuidedItem extends StatelessWidget {
-  GuidedExercise exercise;
-  GuidedItem({super.key, required this.exercise});
+  final GuidedExercise exercise;
+  const GuidedItem({super.key, required this.exercise});
 
   @override
   Widget build(BuildContext context) {
@@ -18,9 +18,9 @@ class GuidedItem extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.all(14.0),
         child: Row(
-          spacing: 10,
           children: [
             getImage(exercise.type),
+            const SizedBox(width: 10),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -49,10 +49,9 @@ class GuidedItem extends StatelessWidget {
                   builder: (context) {
                     return AlertDialog(
                       content: Column(
-                        spacing: 10,
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Text('Timer',style: TextStyle(
+                          const Text('Timer',style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.w600,
                             color: Colors.black

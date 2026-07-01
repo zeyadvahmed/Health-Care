@@ -3,7 +3,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_strings.dart';
 import '../../../data/models/activity_model.dart';
-import '../../../data/models/activity_challenge_model.dart';
 import '../../../shared/widgets/indicators/loading_widget.dart';
 import '../../../shared/widgets/cards/activity_card.dart';
 import '../cubit/activity_cubit.dart';
