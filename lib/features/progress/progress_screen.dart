@@ -78,17 +78,7 @@ class _ProgressScreenState extends State<ProgressScreen> {
                   initialData: 0,
                   builder: (context, avgSnapshot) {
                     final avgCalories = avgSnapshot.data ?? 0;
-                    return StreamBuilder<int>(
-                      stream: _controller.nutritionAdherenceStream(_uid),
-                      initialData: 0,
-                      builder: (context, adherenceSnapshot) {
-                        final adherence = adherenceSnapshot.data ?? 0;
-                        return _NutritionCard(
-                          avgCalories: avgCalories,
-                          adherence: adherence,
-                        );
-                      },
-                    );
+                    return _NutritionCard(avgCalories: avgCalories);
                   },
                 ),
                 const SizedBox(height: 24),
@@ -271,33 +261,35 @@ class _TrendCard extends StatelessWidget {
 
 class _NutritionCard extends StatelessWidget {
   final int avgCalories;
-  final int adherence;
 
-  const _NutritionCard({
-    required this.avgCalories,
-    required this.adherence,
-  });
+  const _NutritionCard({required this.avgCalories});
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 132,
-      padding: const EdgeInsets.all(16),
+      height: 100,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: _cardDecoration(),
-      child: Row(
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Expanded(
-            child: _InlineMetric(
-              label: 'Avg Daily Intake',
-              value: '${_formatNumber(avgCalories)} kcal',
+          Text(
+            'Daily Intake',
+            style: TextStyle(
+              color: AppColors.textSecondary,
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
             ),
           ),
-          _InlineMetric(
-            label: 'Adherence',
-            value: '$adherence%',
-            valueColor: AppColors.success,
-            alignEnd: true,
+          const SizedBox(height: 6),
+          Text(
+            '${avgCalories} kcal',
+            style: const TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w800,
+              color: AppColors.textPrimary,
+            ),
           ),
         ],
       ),
@@ -388,39 +380,7 @@ class _HydrationCard extends StatelessWidget {
   }
 }
 
-class _InlineMetric extends StatelessWidget {
-  final String label;
-  final String value;
-  final Color? valueColor;
-  final bool alignEnd;
 
-  const _InlineMetric({
-    required this.label,
-    required this.value,
-    this.valueColor,
-    this.alignEnd = false,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment:
-          alignEnd ? CrossAxisAlignment.end : CrossAxisAlignment.start,
-      children: [
-        Text(label, style: _mutedStyle()),
-        const SizedBox(height: 4),
-        Text(
-          value,
-          style: TextStyle(
-            color: valueColor ?? AppColors.textPrimary,
-            fontSize: 18,
-            fontWeight: FontWeight.w800,
-          ),
-        ),
-      ],
-    );
-  }
-}
 
 BoxDecoration _cardDecoration() {
   return BoxDecoration(
@@ -434,26 +394,5 @@ BoxDecoration _cardDecoration() {
       ),
     ],
   );
-}
-
-TextStyle _mutedStyle({double fontSize = 12}) {
-  return TextStyle(
-    color: AppColors.textSecondary,
-    fontSize: fontSize,
-    fontWeight: FontWeight.w600,
-  );
-}
-
-String _formatNumber(int value) {
-  final text = value.toString();
-  if (text.length <= 3) return text;
-  final buffer = StringBuffer();
-  for (var i = 0; i < text.length; i++) {
-    if (i > 0 && (text.length - i) % 3 == 0) {
-      buffer.write(',');
-    }
-    buffer.write(text[i]);
-  }
-  return buffer.toString();
 }
 

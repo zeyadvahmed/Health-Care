@@ -234,10 +234,9 @@ class SyncService {
   Future<void> _syncNutrition(String uid) async {
     final localNutrition = LocalNutritionService();
     final foodItems = await localNutrition.getAllFoodItems();
-    final dailyGoal = await localNutrition.getDailyGoal();
 
     await RemoteNutritionService.instance.pushAllFoodItems(uid, foodItems);
-    await RemoteNutritionService.instance.updateDailyGoal(uid, dailyGoal);
+    
   }
 
   // ----------------------------------------------------------
