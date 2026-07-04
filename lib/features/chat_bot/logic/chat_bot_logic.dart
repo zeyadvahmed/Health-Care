@@ -32,17 +32,18 @@ class ChatBotLogic {
       _firestore.collection('User').doc(userId).collection('conversations');
 
   Future<String> createNewConversation() async {
-    const conversationId = 'default';
-    final conversationRef = _conversationsCollection.doc(conversationId);
+    final conversationRef = _conversationsCollection.doc();
+    final conversationId = conversationRef.id;
     final timestamp = DateTime.now().millisecondsSinceEpoch;
 
     await conversationRef.set({
       'createdAt': timestamp,
       'preview': 'New chat',
       'lastTimestamp': timestamp,
-    }, SetOptions(merge: true));
+    });
 
     currentConversationId.value = conversationId;
+    textController.clear();
     return conversationId;
   }
 

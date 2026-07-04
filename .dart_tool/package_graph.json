@@ -16,6 +16,7 @@
         "firebase_messaging",
         "firebase_ui_auth",
         "firebase_ui_oauth_google",
+        "fl_chart",
         "flutter",
         "flutter_bloc",
         "http",
@@ -89,6 +90,14 @@
         "meta",
         "nm",
         "web"
+      ]
+    },
+    {
+      "name": "fl_chart",
+      "version": "0.60.0",
+      "dependencies": [
+        "equatable",
+        "flutter"
       ]
     },
     {
@@ -426,6 +435,14 @@
       "version": "0.0.0",
       "dependencies": [
         "flutter"
+      ]
+    },
+    {
+      "name": "equatable",
+      "version": "2.0.8",
+      "dependencies": [
+        "collection",
+        "meta"
       ]
     },
     {

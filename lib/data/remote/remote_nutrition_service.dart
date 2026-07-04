@@ -125,23 +125,7 @@ class RemoteNutritionService {
     );
   }
 
-  Future<void> clear(String uid) async {
-    final snapshot = await _db.collection(_foodItemsPath(uid)).get();
-    if (snapshot.docs.isEmpty) return;
-
-    final operations = snapshot.docs
-        .map(
-          (doc) => {
-            'type': 'delete',
-            'collection': _foodItemsPath(uid),
-            'docId': doc.id,
-          },
-        )
-        .toList();
-
-    await _batchWriteInChunks(operations);
-  }
-
+  
   Future<void> pushAllFoodItems(String uid, List<FoodItem> items) async {
     final collection = _foodItemsPath(uid);
     final snapshot = await _db.collection(collection).get();

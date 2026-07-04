@@ -19,6 +19,8 @@ import '../../data/models/workout_model.dart';
 
 import '../../data/services/workout_service.dart';
 import '../workout/workout_overview_screen.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:sparksteel/features/workout/workout_controller.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -40,6 +42,9 @@ class _HomeScreenState
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+    context.read<WorkoutController>().seedExercisesIfNeeded();
+    });
 
     loadWorkouts();
     loadUserName();
@@ -103,9 +108,28 @@ class _HomeScreenState
 
           children: [
 
-          Text(
-            'Welcome, $userName',
-            style: AppTextStyles.heading,
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Expanded(
+                child: Text(
+                  'Welcome, $userName',
+                  style: AppTextStyles.heading,
+                ),
+              ),
+              IconButton(
+                onPressed: () => Navigator.pushNamed(
+                  context,
+                  AppRoutes.exerciseSearch,
+                ),
+                icon: const Icon(
+                  Icons.search,
+                  color: Colors.blue,
+                  size: 28,
+                ),
+                tooltip: 'Search Exercises',
+              ),
+            ],
           ),
 
           const SizedBox(

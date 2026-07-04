@@ -48,25 +48,7 @@ class RemoteMoodService {
     );
   }
 
-  Future<List<MoodEntry>> getLast7DaysMoods(String uid) async {
-    final sevenDaysAgo = DateTime.now().subtract(const Duration(days: 7));
-    final cutoff =
-        '${sevenDaysAgo.year}-${sevenDaysAgo.month.toString().padLeft(2, '0')}-${sevenDaysAgo.day.toString().padLeft(2, '0')}';
-
-    final snapshot = await _db
-        .collection(_dailyMoodsPath(uid))
-        .where('date', isGreaterThanOrEqualTo: cutoff)
-        .get();
-
-    final moods = snapshot.docs.map((doc) {
-      final data = Map<String, dynamic>.from(doc.data());
-      data['note'] ??= '';
-      return MoodEntry.fromMap(data);
-    }).toList();
-
-    moods.sort((a, b) => b.date.compareTo(a.date));
-    return moods;
-  }
+  
 
   Future<List<MoodEntry>> getAllMoodEntries(String uid) async {
     final snapshot = await _db.collection(_moodEntriesPath(uid)).get();
