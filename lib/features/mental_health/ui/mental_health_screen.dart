@@ -25,10 +25,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:sparksteel/features/mental_health/logic/mental_cubit.dart';
 import 'package:sparksteel/features/mental_health/logic/mental_state.dart';
-import 'package:sparksteel/data/models/guided_exercise.dart';
-import 'package:sparksteel/features/mental_health/ui/widgets/guided_exercises_widget.dart';
+import 'package:sparksteel/data/models/guided_exercise.dart';import 'package:sparksteel/features/mental_health/ui/notes_list_screen.dart';import 'package:sparksteel/features/mental_health/ui/widgets/guided_exercises_widget.dart';
 import 'package:sparksteel/features/mental_health/ui/widgets/mood_btn.dart';
-import 'package:sparksteel/features/mental_health/ui/widgets/mood_history.dart';
 import 'package:sparksteel/features/mental_health/ui/widgets/note_widget.dart';
 
 class MentalHealthScreen extends StatelessWidget {
@@ -38,7 +36,21 @@ class MentalHealthScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Color(0xffF6F7F8),
-      appBar: AppBar(title: Text('Mental Health')),
+      appBar: AppBar(
+        title: const Text('Mental Health'),
+        actions: [
+          IconButton(
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => const MentalNotesScreen(),
+              ),
+            ),
+            icon: const Icon(Icons.note_alt_outlined),
+            tooltip: 'View notes',
+          ),
+        ],
+      ),
       body: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),
         child: SingleChildScrollView(
@@ -79,7 +91,7 @@ class MentalHealthScreen extends StatelessWidget {
                   ),
                 ],
               ),
-              MoodHistory(),
+              const SizedBox(height: 20),
               Text(
                 'Daily Reflection',
                 style: TextStyle(

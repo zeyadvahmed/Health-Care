@@ -45,24 +45,9 @@ class LocalMoodService {
     
   }
 
-  Future<List<MoodEntry>> getLast7DaysMoods() async {
-    final db = await DatabaseHelper.instance.database;
+  
 
-    final sevenDaysAgo = DateTime.now().subtract(const Duration(days: 7));
-    final cutoff =
-        '${sevenDaysAgo.year}-${sevenDaysAgo.month.toString().padLeft(2, '0')}-${sevenDaysAgo.day.toString().padLeft(2, '0')}';
 
-    final maps = await db.query(
-      'daily_moods',
-      where: 'date >= ?',
-      whereArgs: [cutoff],
-      orderBy: 'date DESC',
-    );
-
-    return maps.map((m) => MoodEntry.fromMap(m)).toList();
-  }
-
-  /// جلب المود اليومي ليوم معين
   Future<List<MoodEntry>> getAllMoodEntries() async {
     final db = await DatabaseHelper.instance.database;
     final maps = await db.query('mood_entries', orderBy: 'date DESC');
@@ -100,14 +85,4 @@ class LocalMoodService {
   }
  
   
-  // Future<List<MentalExercise>> getExercisesByType(ExerciseType type) async {
-  //   final db = await database;
-  //   final maps = await db.query(
-  //     'mental_exercises',
-  //     where: 'type = ?',
-  //     whereArgs: [type.name],
-  //     orderBy: 'name',
-  //   );
-  //   return maps.map((m) => MentalExercise.fromMap(m)).toList();
-  // }
 }
