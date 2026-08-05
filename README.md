@@ -1,6 +1,10 @@
-# sparlsteel
+# sparksteel
 
 A new Flutter project.
+
+# infograph
+
+![image](https://github.com/user/repo/assets/images/SparkSteel infograph.png)
 
 ## Getting Started
 
