@@ -4,7 +4,7 @@ A new Flutter project.
 
 # infograph
 
-![image](assets/images/SparkSteel_infograph.png)
+![image](assets/images/SparkSteel_updated_infograph.png)
 
 ## Getting Started
 
